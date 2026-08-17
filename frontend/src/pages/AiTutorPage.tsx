@@ -99,7 +99,7 @@ export const AiTutorPage: React.FC = () => {
       id: 'init',
       role: 'model',
       content:
-        '👋 Welcome to the **AI Study Room**! I am **Aura**, your academic AI tutor.\n\nSelect a textbook from the dropdown above or ask me any question about your curriculum, formulas, programming, or course topics.',
+        'Welcome to the **AI Study Room**! I am **Aura**, your academic AI tutor.\n\nSelect a textbook from the focus menu above or ask me any question regarding formulas, course syllabus, programming, or revision topics.',
       timestamp: Date.now(),
     },
   ]);

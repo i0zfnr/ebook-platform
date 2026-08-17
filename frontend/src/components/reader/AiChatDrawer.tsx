@@ -112,7 +112,7 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({
         {
           id: 'welcome',
           role: 'model',
-          content: `👋 Hi! I am **Aura**, your AI Study Companion for **${bookTitle}**.\n\nYou are currently on **Page ${currentPage}**. How can I help you understand this chapter?`,
+          content: `Hi! I am **Aura**, your AI Study Companion for **${bookTitle}**.\n\nYou are currently on **Page ${currentPage}**. How can I help you understand this chapter?`,
           timestamp: Date.now(),
         },
       ]);
