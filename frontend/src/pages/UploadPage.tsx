@@ -15,6 +15,7 @@ import {
   QrCode,
   RotateCcw,
   Check,
+  GraduationCap,
 } from 'lucide-react';
 import { ebookService, formatBytes } from '../services/ebookService';
 import { loadPdfDocument } from '../services/pdfService';
@@ -547,22 +548,34 @@ export const UploadPage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                <div className="p-2 rounded-xl liquid-glass text-center text-[10px] font-bold">
-                  <span className="text-violet-600 dark:text-[#a78bfa] block">🎯 Quizzes</span>
-                  <span className="text-slate-400 text-[9px]">MCQ Checks</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                <div className="p-2.5 rounded-xl liquid-glass text-center text-[10px] font-bold space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-violet-600 dark:text-[#a78bfa]">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    <span>Quizzes</span>
+                  </div>
+                  <span className="text-slate-400 text-[9px] block">MCQ Checks</span>
                 </div>
-                <div className="p-2 rounded-xl liquid-glass text-center text-[10px] font-bold">
-                  <span className="text-rose-500 block">▶️ Videos</span>
-                  <span className="text-slate-400 text-[9px]">YouTube Embeds</span>
+                <div className="p-2.5 rounded-xl liquid-glass text-center text-[10px] font-bold space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-rose-500">
+                    <Play className="h-3.5 w-3.5 fill-rose-500" />
+                    <span>Videos</span>
+                  </div>
+                  <span className="text-slate-400 text-[9px] block">YouTube Embeds</span>
                 </div>
-                <div className="p-2 rounded-xl liquid-glass text-center text-[10px] font-bold">
-                  <span className="text-amber-500 block">🎮 Flashcards</span>
-                  <span className="text-slate-400 text-[9px]">Recall Games</span>
+                <div className="p-2.5 rounded-xl liquid-glass text-center text-[10px] font-bold space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-amber-500">
+                    <Gamepad2 className="h-3.5 w-3.5" />
+                    <span>Flashcards</span>
+                  </div>
+                  <span className="text-slate-400 text-[9px] block">Recall Games</span>
                 </div>
-                <div className="p-2 rounded-xl liquid-glass text-center text-[10px] font-bold">
-                  <span className="text-emerald-500 block">📱 QR / Forms</span>
-                  <span className="text-slate-400 text-[9px]">Google Forms</span>
+                <div className="p-2.5 rounded-xl liquid-glass text-center text-[10px] font-bold space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-emerald-500">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    <span>AI Tutor</span>
+                  </div>
+                  <span className="text-slate-400 text-[9px] block">Study Copilot</span>
                 </div>
               </div>
             </div>
