@@ -403,13 +403,13 @@ export const AiTutorPage: React.FC = () => {
       </div>
 
       {/* Sticky Bottom Docked Chat Box */}
-      <div className="sticky bottom-0 z-30 pt-2 pb-4 bg-gradient-to-t from-slate-100 via-slate-100/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 dark:to-transparent shrink-0">
+      <div className="sticky bottom-0 z-30 pt-1 pb-3 sm:pb-5 w-full max-w-4xl mx-auto px-2 shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSendMessage();
           }}
-          className="relative flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border-2 border-violet-500/30 dark:border-violet-500/40 p-2 sm:p-2.5 shadow-2xl shadow-violet-500/10 ring-4 ring-violet-500/5 focus-within:border-violet-500 focus-within:ring-violet-500/20 transition-all"
+          className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-full border border-slate-300 dark:border-slate-700/80 px-4 py-2 sm:py-2.5 shadow-xl hover:border-violet-400/80 dark:hover:border-violet-500/80 focus-within:border-violet-500 dark:focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 transition-all duration-200"
         >
           <input
             type="text"
@@ -417,15 +417,15 @@ export const AiTutorPage: React.FC = () => {
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder={`Ask Aura anything about ${selectedBook?.title || 'your studies'}...`}
             disabled={isLoading}
-            className="flex-1 bg-transparent px-4 py-2 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+            className="flex-1 bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none pl-1"
           />
           <button
             type="submit"
             disabled={isLoading || !inputMessage.trim()}
-            className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white disabled:opacity-40 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-violet-600/30 cursor-pointer"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 active:scale-95 transition-all shadow-md shadow-violet-600/30 cursor-pointer"
             aria-label="Send message"
           >
-            <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Send className="h-4 w-4 text-white" />
           </button>
         </form>
 
