@@ -284,41 +284,41 @@ export const AiTutorPage: React.FC = () => {
       </div>
 
       {/* Messages Scrollable Stage */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-1 pb-4 select-text min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-5 px-3 sm:px-6 py-3 select-text min-h-0">
         {messages.map((msg) => {
           const isUser = msg.role === 'user';
           return (
             <div
               key={msg.id}
-              className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex items-start gap-3.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Professional Avatar Icon */}
               <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-white text-xs shadow-md ${
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white text-xs shadow-lg transition-transform hover:scale-105 ${
                   isUser
-                    ? 'bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-violet-600/30'
-                    : 'bg-gradient-to-tr from-purple-600 via-violet-600 to-pink-500 shadow-purple-600/30 ring-2 ring-violet-400/20'
+                    ? 'bg-gradient-to-tr from-slate-700 to-slate-900 dark:from-slate-800 dark:to-slate-950 border border-white/20 shadow-slate-900/20'
+                    : 'bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 border border-white/25 shadow-violet-600/30'
                 }`}
               >
                 {isUser ? (
-                  <User className="h-4 w-4" />
+                  <User className="h-4.5 w-4.5 text-white" />
                 ) : (
-                  <GraduationCap className="h-4 w-4 text-white" />
+                  <GraduationCap className="h-5 w-5 text-white" />
                 )}
               </div>
 
               {/* Message Bubble */}
               <div
-                className={`max-w-[85%] rounded-3xl p-4 text-xs sm:text-sm leading-relaxed shadow-lg ${
+                className={`max-w-[85%] sm:max-w-[80%] rounded-3xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed shadow-lg ${
                   isUser
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-none'
-                    : 'bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-[#f8fafc] rounded-tl-none backdrop-blur-xl'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-none shadow-violet-600/20'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-[#f8fafc] rounded-tl-none shadow-slate-200/50 dark:shadow-none'
                 }`}
               >
                 <div className="font-sans leading-relaxed">
                   {renderFormattedMessage(msg.content)}
                 </div>
-                <span className="block text-[9px] font-mono-code opacity-50 mt-2 text-right">
+                <span className="block text-[9px] font-mono-code opacity-50 mt-2.5 text-right">
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -327,11 +327,11 @@ export const AiTutorPage: React.FC = () => {
         })}
 
         {isLoading && (
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white shadow-md">
-              <GraduationCap className="h-4 w-4" />
+          <div className="flex items-start gap-3.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30 border border-white/25">
+              <GraduationCap className="h-5 w-5" />
             </div>
-            <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-white/10 rounded-3xl rounded-tl-none p-4 flex items-center gap-2.5 text-xs text-violet-600 dark:text-violet-400 shadow-md backdrop-blur-xl">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 rounded-3xl rounded-tl-none p-4 flex items-center gap-3 text-xs text-violet-600 dark:text-violet-400 shadow-md">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="font-mono-code font-bold animate-pulse">
                 Aura is analyzing and formulating explanation...
