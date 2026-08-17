@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   GraduationCap,
   Sparkle,
+  BookOpen,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { ebookService } from '../services/ebookService';
 import { aiChatService, type ChatMessage } from '../services/aiChatService';
@@ -90,6 +93,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
 export const AiTutorPage: React.FC = () => {
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [selectedBook, setSelectedBook] = useState<Ebook | null>(null);
+  const [isBookDropdownOpen, setIsBookDropdownOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init',
@@ -200,26 +204,81 @@ export const AiTutorPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Book Context Selector */}
-        <div className="flex items-center gap-2">
+        {/* Custom Professional Book Context Selector */}
+        <div className="relative flex items-center gap-2">
           <span className="text-xs font-mono-code text-slate-400 hidden md:inline">Focus Book:</span>
-          <select
-            value={selectedBook?.id || ''}
-            onChange={(e) => {
-              const b = ebooks.find((item) => String(item.id) === e.target.value);
-              setSelectedBook(b || null);
-            }}
-            className="liquid-btn-secondary px-3.5 py-2 text-xs font-bold rounded-xl text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 cursor-pointer focus:outline-none max-w-[220px] truncate shadow-sm"
-          >
-            <option value="" className="dark:bg-slate-900 text-slate-900 dark:text-white">
-              General Academic Tutor
-            </option>
-            {ebooks.map((b) => (
-              <option key={b.id} value={b.id} className="dark:bg-slate-900 text-slate-900 dark:text-white">
-                📖 {b.title}
-              </option>
-            ))}
-          </select>
+          
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsBookDropdownOpen(!isBookDropdownOpen)}
+              className="liquid-btn-secondary flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 bg-white/70 dark:bg-slate-800/70 hover:bg-white dark:hover:bg-slate-800 cursor-pointer shadow-sm max-w-[240px] transition-all"
+            >
+              <BookOpen className="h-4 w-4 text-violet-600 dark:text-violet-400 shrink-0" />
+              <span className="truncate">
+                {selectedBook ? selectedBook.title : 'General Academic Tutor'}
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isBookDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Floating Dropdown Menu */}
+            {isBookDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsBookDropdownOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-72 max-h-72 overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
+                  <div className="px-3 py-1.5 text-[10px] font-mono-code font-bold text-slate-400 uppercase tracking-wider">
+                    Select Study Material
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBook(null);
+                      setIsBookDropdownOpen(false);
+                    }}
+                    className={`flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                      !selectedBook
+                        ? 'bg-violet-600/10 text-violet-700 dark:text-violet-300 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
+                    <span className="flex-1 truncate">General Academic Tutor</span>
+                    {!selectedBook && <Check className="h-4 w-4 text-violet-600 shrink-0" />}
+                  </button>
+
+                  {ebooks.map((b) => {
+                    const isSelected = selectedBook?.id === b.id;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedBook(b);
+                          setIsBookDropdownOpen(false);
+                        }}
+                        className={`flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-violet-600/10 text-violet-700 dark:text-violet-300 font-bold'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <BookOpen className="h-4 w-4 text-violet-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate">{b.title}</p>
+                          {b.author && <p className="text-[10px] text-slate-400 truncate">{b.author}</p>}
+                        </div>
+                        {isSelected && <Check className="h-4 w-4 text-violet-600 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             type="button"
