@@ -4,11 +4,15 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  Zap,
-  Lock,
   BookOpen,
   Terminal,
   Smartphone,
+  Bot,
+  Gamepad2,
+  GraduationCap,
+  Cpu,
+  Layers,
+  ExternalLink,
 } from 'lucide-react';
 import { BrandLogo } from '../components/common/BrandLogo';
 
@@ -24,16 +28,72 @@ export const AboutPage: React.FC = () => {
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-[#f8fafc] max-w-3xl mx-auto leading-tight">
-            Built for Fun, Freedom &{' '}
+            Next-Gen E-Books Powered by{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-indigo-500 to-purple-600 dark:from-[#a78bfa] dark:via-[#c4b5fd] dark:to-[#818cf8]">
-              Distraction-Free
+              Gemini AI
             </span>{' '}
-            Learning.
+            & Pure Interactive Learning.
           </h1>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 dark:text-[#94a3b8] leading-relaxed">
-            A passion project engineered by <strong className="text-slate-900 dark:text-[#f8fafc]">Hafizul Irfan</strong>, student of Diploma in Information Technology (DIT) at Politeknik Besut, to solve the frustrations of commercial e-book viewers.
+            An innovative open-source educational platform engineered by <strong className="text-slate-900 dark:text-[#f8fafc]">Hafizul Irfan</strong>, student of Diploma in Information Technology (DIT) at Politeknik Besut, combining smooth 3D flipbook reading with real-time AI pedagogical tutoring.
           </p>
+        </div>
+
+        {/* AI Innovation Showcase */}
+        <div className="liquid-glass rounded-3xl p-8 sm:p-10 shadow-2xl border border-violet-500/30 dark:border-violet-500/20 relative overflow-hidden space-y-8">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 text-white shadow-xl shadow-violet-600/30">
+                <Bot className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+                  The Google Gemini 3.6 Flash AI Engine
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Active document research & interactive learning automation
+                </p>
+              </div>
+            </div>
+            <span className="liquid-pill text-[11px] py-1 px-3 font-mono-code font-bold text-violet-600 dark:text-violet-400">
+              Live AI Integration
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="liquid-card p-5 space-y-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600/10 text-violet-600 dark:text-[#a78bfa]">
+                <Cpu className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Active Research & Quizzes</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                When a textbook is uploaded, Gemini deep-dives into mathematical theorems, formulas, and technical chapters to formulate curriculum-grade quizzes with step-by-step solutions.
+              </p>
+            </div>
+
+            <div className="liquid-card p-5 space-y-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600/10 text-purple-600 dark:text-[#c084fc]">
+                <Gamepad2 className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Speed Match Game & 3D Cards</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Gamified learning suite featuring 3D interactive flashcards and an arcade Speed Match Game testing term recall directly embedded on relevant flipped pages.
+              </p>
+            </div>
+
+            <div className="liquid-card p-5 space-y-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-[#818cf8]">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Aura AI Academic Tutor</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                A 1-on-1 pedagogical companion available both as a page-aware slide-out drawer inside the reader and as a full-page dedicated study room.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Why this was built: The Problem vs Solution */}
@@ -45,8 +105,8 @@ export const AboutPage: React.FC = () => {
                 <ShieldAlert className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-[#f8fafc]">The Problem with Other Platforms</h3>
-                <p className="text-xs text-slate-500 dark:text-[#94a3b8]">Why existing flipbook sites are frustrating</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-[#f8fafc]">The Problem with Commercial Viewers</h3>
+                <p className="text-xs text-slate-500 dark:text-[#94a3b8]">Why standard flipbook sites are frustrating</p>
               </div>
             </div>
 
@@ -85,7 +145,7 @@ export const AboutPage: React.FC = () => {
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-emerald-500 font-bold shrink-0">✓</span>
-                <span><strong>Free for Politeknik Besut:</strong> Openly accessible for all lecturers to upload educational modules and notes.</span>
+                <span><strong>Free for Politeknik Besut:</strong> Openly accessible for all lecturers to upload educational modules and notes up to 512MB.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="text-emerald-500 font-bold shrink-0">✓</span>
@@ -136,57 +196,43 @@ export const AboutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Future Evolution Roadmap */}
+        {/* Tech Stack Matrix */}
         <div className="space-y-6">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 liquid-pill text-[10px] py-0.5 px-2.5">
-              <Zap className="h-3 w-3 text-violet-600 dark:text-[#a78bfa]" />
-              Platform Roadmap
+              <Layers className="h-3 w-3 text-violet-600 dark:text-[#a78bfa]" />
+              Modern Architecture
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#f8fafc]">
-              The Vision Ahead
+              Built with Modern Engineering
             </h2>
             <p className="text-xs text-slate-500 dark:text-[#94a3b8]">
-              Continuous evolution crafted for Politeknik Besut
+              High-performance technologies engineered for speed and reliability
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-            {/* Phase 1 - Current */}
-            <div className="liquid-card p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="liquid-pill text-[10px] py-0.5 px-2 font-bold">
-                  Phase 1 • Active Now
-                </span>
-                <span className="text-emerald-500 text-xs font-mono-code font-bold">Live</span>
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-[#f8fafc]">Frictionless Open Publishing</h3>
-              <p className="text-xs text-slate-600 dark:text-[#94a3b8] leading-relaxed">
-                Lecturers and creators can immediately publish PDF modules without accounts. Fast vector rendering, high-DPI scaling, table of contents extraction, and in-book text search are fully active.
-              </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+            <div className="liquid-card p-4 text-center space-y-1.5">
+              <p className="text-xs font-extrabold text-slate-900 dark:text-white">React 18 + Vite</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Ultra-fast frontend with TypeScript</p>
             </div>
-
-            {/* Phase 2 - Upcoming */}
-            <div className="liquid-card p-6 space-y-4 border-violet-500/40">
-              <div className="flex items-center justify-between">
-                <span className="liquid-pill text-[10px] py-0.5 px-2 font-bold text-violet-600 dark:text-[#a78bfa]">
-                  Phase 2 • Coming Soon
-                </span>
-                <span className="text-violet-500 text-xs font-mono-code font-bold">In Development</span>
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-[#f8fafc] flex items-center gap-2">
-                <Lock className="h-4 w-4 text-violet-600 dark:text-[#a78bfa]" />
-                Institutional Poli Email Authentication
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-[#94a3b8] leading-relaxed">
-                A verified portal allowing lecturers to authenticate with their official Politeknik Besut email (<code className="font-mono-code text-violet-600 dark:text-[#c4b5fd]">@politeknik.edu.my</code>) to manage collections, while keeping student reading 100% login-free.
-              </p>
+            <div className="liquid-card p-4 text-center space-y-1.5">
+              <p className="text-xs font-extrabold text-slate-900 dark:text-white">Laravel 11 REST API</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Robust backend with 512MB uploads</p>
+            </div>
+            <div className="liquid-card p-4 text-center space-y-1.5">
+              <p className="text-xs font-extrabold text-slate-900 dark:text-white">Gemini 3.6 Flash</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Generative academic research AI</p>
+            </div>
+            <div className="liquid-card p-4 text-center space-y-1.5">
+              <p className="text-xs font-extrabold text-slate-900 dark:text-white">Liquid Glassmorphism</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Apple-grade dark & light UI system</p>
             </div>
           </div>
         </div>
 
         {/* Creator & Academic Bio Card */}
-        <div className="liquid-glass rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="liquid-glass rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border border-white/20">
           <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
             <BrandLogo size="lg" />
             <div className="space-y-1">
@@ -197,20 +243,21 @@ export const AboutPage: React.FC = () => {
                 Student DIT • Politeknik Besut, Terengganu
               </p>
               <p className="text-xs text-slate-500 dark:text-[#94a3b8] max-w-md pt-1 leading-relaxed">
-                Passionate about building state-of-the-art web applications, modern UI/UX design systems, and practical tools that enhance student learning experiences.
+                Passionate about engineering state-of-the-art web applications, intuitive UI/UX design systems, and generative AI tools that empower higher-education learning.
               </p>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
             <a
-              href="https://github.com/i0zfnr/my-portfolio.git"
+              href="https://github.com/i0zfnr/ebook-platform"
               target="_blank"
               rel="noopener noreferrer"
-              className="liquid-btn-primary flex items-center gap-2 px-5 py-2.5 text-xs font-bold"
+              className="liquid-btn-primary flex items-center gap-2 px-5 py-2.5 text-xs font-bold shadow-lg shadow-violet-600/30"
             >
               <Terminal className="h-4 w-4" />
-              <span>View Portfolio</span>
+              <span>GitHub Repo</span>
+              <ExternalLink className="h-3 w-3 opacity-70" />
             </a>
             <Link
               to="/library"
