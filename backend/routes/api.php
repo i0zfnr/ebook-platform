@@ -13,6 +13,7 @@ Route::get('ebooks/{ebook}/file', [EbookController::class, 'file'])->name('ebook
 Route::get('ebooks/{ebook}/cover', [EbookController::class, 'cover'])->name('ebooks.cover');
 Route::post('ebooks/{ebook}/generate-ai', [EbookController::class, 'generateAi'])->name('ebooks.generateAi');
 Route::post('generate-ai', [EbookController::class, 'generateAiStandalone'])->name('generateAiStandalone');
+Route::post('ai/chat', [\App\Http\Controllers\Api\AiChatController::class, 'chat'])->name('ai.chat');
 
 // E-Book REST API routes
 Route::apiResource('ebooks', EbookController::class);

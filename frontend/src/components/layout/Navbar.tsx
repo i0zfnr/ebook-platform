@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Library, UploadCloud, Home, Info, Menu, X, Sparkles } from 'lucide-react';
+import { Library, UploadCloud, Home, Info, Menu, X, Sparkles, Bot } from 'lucide-react';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { BrandLogo } from '../common/BrandLogo';
 
@@ -11,6 +11,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Library', path: '/library', icon: Library },
+    { name: 'AI Tutor', path: '/ai-tutor', icon: Bot, isSpecial: true },
     { name: 'Upload', path: '/upload', icon: UploadCloud },
     { name: 'About', path: '/about', icon: Info },
   ];

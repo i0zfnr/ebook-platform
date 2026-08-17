@@ -25,6 +25,7 @@ import { ThumbnailSidebar } from '../components/reader/ThumbnailSidebar';
 import { TableOfContentsDrawer } from '../components/reader/TableOfContentsDrawer';
 import { SearchDrawer } from '../components/reader/SearchDrawer';
 import { AiLearningHubDrawer } from '../components/reader/AiLearningHubDrawer';
+import { AiChatDrawer } from '../components/reader/AiChatDrawer';
 import { InteractivePageHotspots } from '../components/reader/InteractivePageHotspots';
 import { InteractiveOverlayModal } from '../components/interactive/InteractiveOverlayModal';
 
@@ -52,6 +53,7 @@ export const ReaderPage: React.FC = () => {
   const [showToc, setShowToc] = useState<boolean>(false);
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [showAiHub, setShowAiHub] = useState<boolean>(false);
+  const [showAiChat, setShowAiChat] = useState<boolean>(false);
   const [spreadMode, setSpreadMode] = useState<'auto' | 'single' | 'double'>('auto');
 
   // 1. Fetch Ebook details, load PDF, resume saved page, extract outline & load AI interactive elements
@@ -330,7 +332,16 @@ export const ReaderPage: React.FC = () => {
           setShowThumbnails(false);
           setShowToc(false);
           setShowSearch(false);
+          setShowAiChat(false);
         }}
+        onToggleAiChat={() => {
+          setShowAiChat(!showAiChat);
+          setShowThumbnails(false);
+          setShowToc(false);
+          setShowSearch(false);
+          setShowAiHub(false);
+        }}
+        showAiChat={showAiChat}
         spreadMode={spreadMode}
         onToggleSpreadMode={handleToggleSpreadMode}
         bookIdOrSlug={ebook.slug || ebook.id}
@@ -411,6 +422,14 @@ export const ReaderPage: React.FC = () => {
           onOpenElement={(el) => setActiveModalElement(el)}
           onSelectPage={(pageNum) => setCurrentPage(pageNum)}
           title={ebook.title}
+        />
+
+        {/* AI Study Tutor Chat Companion Drawer */}
+        <AiChatDrawer
+          isOpen={showAiChat}
+          onClose={() => setShowAiChat(false)}
+          bookTitle={ebook.title}
+          currentPage={currentPage}
         />
 
         {/* Full-Text Search Drawer */}

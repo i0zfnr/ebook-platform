@@ -8,6 +8,7 @@ import { UploadPage } from './pages/UploadPage';
 import { BookDetailsPage } from './pages/BookDetailsPage';
 import { ReaderPage } from './pages/ReaderPage';
 import { AboutPage } from './pages/AboutPage';
+import { AiTutorPage } from './pages/AiTutorPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AnimatedBackground } from './components/common/AnimatedBackground';
 import { CursorGlow } from './components/common/CursorGlow';
@@ -29,6 +30,7 @@ function AppLayout() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/library" element={<LibraryPage />} />
+            <Route path="/ai-tutor" element={<AiTutorPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/book/:id" element={<BookDetailsPage />} />

@@ -17,6 +17,7 @@ import {
   Bookmark,
   BookmarkCheck,
   Sparkles,
+  Bot,
 } from 'lucide-react';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { BrandLogo } from '../common/BrandLogo';
@@ -48,6 +49,8 @@ interface ReaderToolbarProps {
   onToggleAiHub?: () => void;
   showAiHub?: boolean;
   aiCount?: number;
+  onToggleAiChat?: () => void;
+  showAiChat?: boolean;
 }
 
 export const ReaderToolbar: React.FC<ReaderToolbarProps> = ({
@@ -77,6 +80,8 @@ export const ReaderToolbar: React.FC<ReaderToolbarProps> = ({
   onToggleAiHub,
   showAiHub = false,
   aiCount = 0,
+  onToggleAiChat,
+  showAiChat = false,
 }) => {
   const [inputPage, setInputPage] = useState<string>(String(currentPage));
 
@@ -174,6 +179,22 @@ export const ReaderToolbar: React.FC<ReaderToolbarProps> = ({
                 {aiCount}
               </span>
             )}
+          </button>
+        )}
+
+        {/* AI Tutor Chat Companion Button */}
+        {onToggleAiChat && (
+          <button
+            onClick={onToggleAiChat}
+            className={`flex h-8 items-center gap-1.5 px-3 rounded-xl transition-all cursor-pointer border ${
+              showAiChat
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-lg shadow-purple-600/40 border-purple-400/50'
+                : 'liquid-glass bg-purple-500/10 text-purple-700 dark:text-[#f472b6] border-purple-500/30 hover:bg-purple-600 hover:text-white shadow-sm'
+            }`}
+            title="Chat with Aura AI Tutor about this page"
+          >
+            <Bot className="h-3.5 w-3.5" />
+            <span className="text-xs font-bold font-mono-code hidden sm:inline">AI Tutor</span>
           </button>
         )}
 
