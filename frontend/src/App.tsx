@@ -17,6 +17,8 @@ import { SmoothScroll } from './components/common/SmoothScroll';
 function AppLayout() {
   const location = useLocation();
   const isReaderView = location.pathname.startsWith('/read/');
+  const isAiTutorView = location.pathname === '/ai-tutor';
+  const hideFooter = isReaderView || isAiTutorView;
 
   return (
     <SmoothScroll>
@@ -26,7 +28,7 @@ function AppLayout() {
         <CursorGlow />
 
         {!isReaderView && <Navbar />}
-        <main className="relative z-10 flex-1">
+        <main className="relative z-10 flex-1 flex flex-col">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/library" element={<LibraryPage />} />
@@ -38,7 +40,7 @@ function AppLayout() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
-        {!isReaderView && <Footer />}
+        {!hideFooter && <Footer />}
       </div>
     </SmoothScroll>
   );
