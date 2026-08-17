@@ -1,0 +1,39 @@
+# Root and Dependency Directories
+/node_modules
+/frontend/node_modules
+/frontend/dist
+/frontend/.env.local
+/backend/vendor
+
+# Laravel Environment and Storage
+/backend/.env
+/backend/.env.backup
+/backend/.env.production
+/backend/storage/*.key
+/backend/storage/logs/*.log
+/backend/storage/framework/cache/*
+!/backend/storage/framework/cache/.gitignore
+/backend/storage/framework/sessions/*
+!/backend/storage/framework/sessions/.gitignore
+/backend/storage/framework/views/*
+!/backend/storage/framework/views/.gitignore
+/backend/storage/framework/testing/*
+!/backend/storage/framework/testing/.gitignore
+/backend/storage/app/public/*
+!/backend/storage/app/public/.gitignore
+
+# PHP / Composer
+/backend/composer.phar
+/backend/auth.json
+
+# IDE / OS Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.phpunit.result.cache
