@@ -49,7 +49,7 @@ export const Footer: React.FC = () => {
             {/* Academic Institution Pill */}
             <div className="inline-flex items-center gap-2 liquid-pill text-xs py-1 px-3.5">
               <GraduationCap className="h-3.5 w-3.5 text-violet-600 dark:text-[#a78bfa]" />
-              <span>Politeknik Besut, Terengganu</span>
+              <span>Jabatan Matematik, Sains & Komputer (JMSK) • Politeknik Besut</span>
             </div>
           </div>
 
@@ -87,7 +87,7 @@ export const Footer: React.FC = () => {
           <div className="md:col-span-4 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-[#f8fafc] font-mono-code flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-violet-600 dark:text-[#a78bfa]" />
-              Lecturer Project Team
+              JMSK Lecturer Team
             </h4>
             <div className="space-y-2 text-xs">
               {lecturers.map((lecturer, idx) => (
@@ -110,7 +110,7 @@ export const Footer: React.FC = () => {
 
               <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-[#94a3b8] pt-1">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
-                <span>Politeknik Besut Academic Platform</span>
+                <span>Jabatan Matematik, Sains dan Komputer (JMSK)</span>
               </div>
             </div>
           </div>
@@ -121,13 +121,13 @@ export const Footer: React.FC = () => {
           <div className="flex items-center gap-2 text-slate-600 dark:text-[#94a3b8]">
             <span>© {new Date().getFullYear()} FlipBook Platform.</span>
             <span>•</span>
-            <span className="font-semibold text-slate-900 dark:text-[#f8fafc]">Politeknik Besut</span>
+            <span className="font-semibold text-slate-900 dark:text-[#f8fafc]">JMSK Politeknik Besut</span>
           </div>
 
           <div className="flex items-center gap-1.5 text-slate-500 dark:text-[#94a3b8]">
-            <span>Academic Project by</span>
+            <span>Academic Initiative by</span>
             <span className="liquid-pill text-xs py-0.5 px-2 text-slate-900 dark:text-[#f8fafc]">
-              Politeknik Besut Lecturers
+              JMSK Lecturers
             </span>
           </div>
         </div>

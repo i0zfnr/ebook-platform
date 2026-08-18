@@ -195,13 +195,13 @@ export const AboutPage: React.FC = () => {
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 liquid-pill text-[10px] py-0.5 px-2.5">
               <GraduationCap className="h-3.5 w-3.5 text-violet-600 dark:text-[#a78bfa]" />
-              Project Leadership
+              Jabatan Matematik, Sains & Komputer (JMSK)
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#f8fafc]">
-              Lecturer Project Team
+              JMSK Lecturer Project Team
             </h2>
             <p className="text-xs text-slate-500 dark:text-[#94a3b8] max-w-md mx-auto">
-              Initiated and guided by the academic faculty of Politeknik Besut, Terengganu
+              Jabatan Matematik, Sains dan Komputer (JMSK) • Politeknik Besut, Terengganu
             </p>
           </div>
 
@@ -216,10 +216,10 @@ export const AboutPage: React.FC = () => {
                   Farah Hayati Binti Che Lah
                 </h3>
                 <p className="text-xs text-violet-600 dark:text-[#a78bfa] font-mono-code font-bold">
-                  Lecturer • Politeknik Besut
+                  Lecturer • JMSK, Politeknik Besut
                 </p>
                 <p className="text-xs text-slate-500 dark:text-[#94a3b8] leading-relaxed">
-                  Academic lead in curriculum design and interactive learning implementation.
+                  Academic lead in mathematics curriculum design and interactive learning implementation.
                 </p>
               </div>
 
@@ -241,10 +241,10 @@ export const AboutPage: React.FC = () => {
                   Wan Izyani Binti Wan Jusoh
                 </h3>
                 <p className="text-xs text-purple-600 dark:text-[#c084fc] font-mono-code font-bold">
-                  Lecturer • Politeknik Besut
+                  Lecturer • JMSK, Politeknik Besut
                 </p>
                 <p className="text-xs text-slate-500 dark:text-[#94a3b8] leading-relaxed">
-                  Course coordinator in mathematical sciences and interactive module publishing.
+                  Course coordinator in mathematical sciences and interactive digital textbook publishing.
                 </p>
               </div>
 
@@ -266,10 +266,10 @@ export const AboutPage: React.FC = () => {
                   Wee Siew Ping
                 </h3>
                 <p className="text-xs text-indigo-600 dark:text-[#818cf8] font-mono-code font-bold">
-                  Lecturer • Politeknik Besut
+                  Lecturer • JMSK, Politeknik Besut
                 </p>
                 <p className="text-xs text-slate-500 dark:text-[#94a3b8] leading-relaxed">
-                  Faculty advisor in pedagogical technology and digital textbook distribution.
+                  Faculty advisor in computing & educational technology for digital learning resources.
                 </p>
               </div>
 
