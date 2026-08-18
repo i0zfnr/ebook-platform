@@ -203,6 +203,7 @@ if ($uri === '/api/health') {
     $pdo = getPdo($env, $rootDir);
     $dbType = 'none';
     $booksCount = 0;
+    $dbError = null;
 
     if ($pdo) {
         try {
@@ -211,6 +212,7 @@ if ($uri === '/api/health') {
             $booksCount = intval($countStmt->fetchColumn());
         } catch (\Throwable $e) {
             $dbType = 'error: ' . $e->getMessage();
+            $dbError = $e->getMessage();
         }
     }
 
@@ -219,9 +221,18 @@ if ($uri === '/api/health') {
         'engine' => 'PHP Standalone PDO Engine',
         'php_version' => PHP_VERSION,
         'database_driver' => $dbType,
+        'database_name' => $env['DB_DATABASE'] ?? 'not set',
+        'database_host' => $env['DB_HOST'] ?? 'not set',
+        'database_user' => $env['DB_USERNAME'] ?? 'not set',
+        'db_error' => $dbError,
         'has_gemini_key' => !empty($env['GEMINI_API_KEY']),
         'books_count' => $booksCount,
         'storage_writable' => is_writable($storageDir),
+        'storage_path' => $ebooksDir,
+        'upload_max_filesize' => ini_get('upload_max_filesize'),
+        'post_max_size' => ini_get('post_max_size'),
+        'memory_limit' => ini_get('memory_limit'),
+        'max_execution_time' => ini_get('max_execution_time'),
     ]);
 }
 
