@@ -1,10 +1,33 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configure worker URL for Vite and modern browser bundlers
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).href;
+try {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).href;
+} catch {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+}
+
+/**
+ * Normalize PDF URL to avoid Mixed Content (HTTP on HTTPS) and Localhost CORS on production hosting
+ */
+export function normalizePdfUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      if (rawUrl.includes('127.0.0.1') || rawUrl.includes('localhost')) {
+        const apiIndex = rawUrl.indexOf('/api/');
+        if (apiIndex !== -1) {
+          return rawUrl.substring(apiIndex);
+        }
+      }
+    }
+  }
+  return rawUrl;
+}
 
 export interface RenderPageOptions {
   pageNumber: number;
@@ -56,13 +79,15 @@ const pageTextCache = new Map<string, string[]>();
  * Load PDF document from URL (cached promise for zero duplicate network requests)
  */
 export function loadPdfDocument(url: string): Promise<pdfjsLib.PDFDocumentProxy> {
-  if (pdfDocCache.has(url)) {
-    return pdfDocCache.get(url)!;
+  const finalUrl = normalizePdfUrl(url);
+
+  if (pdfDocCache.has(finalUrl)) {
+    return pdfDocCache.get(finalUrl)!;
   }
 
   const loadPromise = (async () => {
     try {
-      const response = await fetch(url);
+      const response = await fetch(finalUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -78,7 +103,7 @@ export function loadPdfDocument(url: string): Promise<pdfjsLib.PDFDocumentProxy>
       return await loadingTask.promise;
     } catch {
       const loadingTask = pdfjsLib.getDocument({
-        url,
+        url: finalUrl,
         cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
         cMapPacked: true,
       });
@@ -87,7 +112,7 @@ export function loadPdfDocument(url: string): Promise<pdfjsLib.PDFDocumentProxy>
     }
   })();
 
-  pdfDocCache.set(url, loadPromise);
+  pdfDocCache.set(finalUrl, loadPromise);
   return loadPromise;
 }
 
