@@ -4,6 +4,21 @@ use App\Http\Controllers\Api\EbookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+Route::get('health', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $dbStatus = 'connected (' . config('database.default') . ')';
+    } catch (\Throwable $e) {
+        $dbStatus = 'error: ' . $e->getMessage();
+    }
+    return response()->json([
+        'status' => 'online',
+        'php' => PHP_VERSION,
+        'database' => $dbStatus,
+        'storage_writable' => is_writable(storage_path('app/public')),
+    ]);
+});
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
