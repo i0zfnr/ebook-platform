@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import type * as pdfjsLib from 'pdfjs-dist';
-import { ArrowLeft, AlertCircle, Loader2, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2, Gamepad2, UploadCloud, Trash2 } from 'lucide-react';
 import type { Ebook } from '../types/ebook';
 import type { InteractiveElement } from '../types/interactive';
 import { ebookService } from '../services/ebookService';
+import { localBookStorage } from '../services/localBookStorage';
 import {
   loadPdfDocument,
+  cacheUploadedPdf,
   extractPdfOutline,
   type PdfOutlineItem,
   saveReadingProgress,
@@ -31,7 +33,9 @@ import { InteractiveOverlayModal } from '../components/interactive/InteractiveOv
 
 export const ReaderPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const readerContainerRef = useRef<HTMLDivElement | null>(null);
+  const recoveryInputRef = useRef<HTMLInputElement | null>(null);
 
   const [ebook, setEbook] = useState<Ebook | null>(null);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -259,24 +263,95 @@ export const ReaderPage: React.FC = () => {
     );
   }
 
-  // Error Screen
-  if (error || !ebook) {
+  // Handler to recover/attach local PDF file
+  const handleAttachPdfFile = async (file: File) => {
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setLoadingProgressText('Attaching and parsing PDF file...');
+
+    try {
+      if (id) {
+        cacheUploadedPdf(id, file);
+      }
+      if (ebook?.slug) {
+        cacheUploadedPdf(ebook.slug, file);
+      }
+
+      if (ebook) {
+        await localBookStorage.saveBook(ebook, file);
+      }
+
+      const doc = await loadPdfDocument(ebook?.pdf_url || '', id);
+      setPdfDoc(doc);
+      setTotalPages(doc.numPages);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to load PDF file.');
+      setLoading(false);
+    }
+  };
+
+  // Handler to delete corrupted book
+  const handleDeleteCorruptedBook = async () => {
+    if (!id) return;
+    if (confirm('Delete this e-book from your library?')) {
+      await ebookService.deleteEbook(id);
+      navigate('/library');
+    }
+  };
+
+  // Error Screen with Recovery Options
+  if (error || !ebook || !pdfDoc) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-4 text-center">
-        <div className="glass-card max-w-md p-8 border-rose-500/30 space-y-4">
+        <div className="glass-card max-w-md p-8 border-rose-500/30 space-y-5">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400">
             <AlertCircle className="h-7 w-7" />
           </div>
-          <h2 className="text-xl font-bold text-white">Cannot Open E-Book</h2>
-          <p className="text-xs text-slate-400">{error || 'Unknown reader error'}</p>
-          <div className="pt-2">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-violet-500 transition-colors cursor-pointer"
+          <div>
+            <h2 className="text-xl font-bold text-white">Cannot Open E-Book</h2>
+            <p className="text-xs text-slate-400 mt-1">{error || 'PDF document is not cached or reachable.'}</p>
+          </div>
+
+          <div className="flex flex-col gap-2.5 pt-2">
+            <input
+              ref={recoveryInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.[0]) handleAttachPdfFile(e.target.files[0]);
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => recoveryInputRef.current?.click()}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-violet-500 transition-all cursor-pointer shadow-lg shadow-violet-600/30"
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Library</span>
-            </Link>
+              <UploadCloud className="h-4 w-4" />
+              <span>Attach / Pick PDF File to Read</span>
+            </button>
+
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <Link
+                to="/library"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Library</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleDeleteCorruptedBook}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Book</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

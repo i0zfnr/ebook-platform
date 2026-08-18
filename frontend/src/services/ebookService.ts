@@ -217,8 +217,12 @@ export const ebookService = {
    * Delete an ebook and its files
    */
   async deleteEbook(idOrSlug: string | number): Promise<void> {
+    // 1. Delete from local IndexedDB and localStorage
+    await localBookStorage.deleteBook(idOrSlug);
+
+    // 2. Try deleting from backend if connected
     try {
-      await api.delete(`/ebooks/${idOrSlug}`);
+      await api.delete(`/ebooks/${idOrSlug}`, { timeout: 4000 });
     } catch {}
   },
 };

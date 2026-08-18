@@ -112,6 +112,54 @@ export const localBookStorage = {
   getLocalEbookSync(idOrSlug: string | number): Ebook | null {
     const list = localBookStorage.getLocalEbooksSync();
     const str = String(idOrSlug).toLowerCase();
-    return list.find(b => String(b.id) === str || (b.slug && b.slug.toLowerCase() === str)) || null;
+    return list.find(b => String(b.id).toLowerCase() === str || (b.slug && b.slug.toLowerCase() === str)) || null;
+  },
+
+  /**
+   * Delete book from IndexedDB and localStorage
+   */
+  async deleteBook(idOrSlug: string | number): Promise<void> {
+    try {
+      const str = String(idOrSlug).toLowerCase();
+      const list = localBookStorage.getLocalEbooksSync();
+      const target = list.find(b => String(b.id).toLowerCase() === str || (b.slug && b.slug.toLowerCase() === str));
+
+      const keysToDelete = [str];
+      if (target) {
+        keysToDelete.push(String(target.id));
+        if (target.slug) keysToDelete.push(target.slug);
+      }
+
+      // 1. Clean localStorage
+      const filtered = list.filter(b => !keysToDelete.includes(String(b.id)) && !(b.slug && keysToDelete.includes(b.slug)));
+      localStorage.setItem('ebook_local_library', JSON.stringify(filtered));
+
+      for (const k of keysToDelete) {
+        localStorage.removeItem(`ebook_reading_progress_${k}`);
+        localStorage.removeItem(`ebook_bookmarks_${k}`);
+        localStorage.removeItem(`ebook_interactive_elements_${k}`);
+      }
+
+      // 2. Clean IndexedDB
+      const db = await openDb();
+      const tx = db.transaction([PDF_STORE, META_STORE], 'readwrite');
+      const pdfStore = tx.objectStore(PDF_STORE);
+      const metaStore = tx.objectStore(META_STORE);
+
+      for (const k of keysToDelete) {
+        pdfStore.delete(k);
+        metaStore.delete(k);
+        if (target && typeof target.id === 'number') {
+          metaStore.delete(target.id);
+        }
+      }
+
+      return new Promise((resolve) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch (e) {
+      console.warn('Failed to delete book from local storage:', e);
+    }
   },
 };

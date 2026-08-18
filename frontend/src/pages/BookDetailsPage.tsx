@@ -65,11 +65,12 @@ export const BookDetailsPage: React.FC = () => {
     setDeleting(true);
     try {
       await ebookService.deleteEbook(ebook.slug || ebook.id);
-      navigate('/library');
     } catch {
-      alert('Failed to delete e-book. Please try again.');
+      // Handled gracefully
+    } finally {
       setDeleting(false);
       setShowDeleteModal(false);
+      navigate('/library');
     }
   };
 
