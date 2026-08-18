@@ -10,8 +10,8 @@ const getBaseUrl = (): string => {
   }
 
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    // If on HTTPS or any production domain, always use same-origin relative /api
+    if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
       return '/api';
     }
   }
