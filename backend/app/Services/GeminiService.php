@@ -31,32 +31,120 @@ Analyze this actual extracted text from the uploaded PDF document:
 === DOCUMENT EXCERPT END ===
 
 Carefully research the subject matter, chapters, mathematical equations, technical terms, and core concepts presented in the text excerpt.
-Generate a comprehensive, curriculum-grade interactive learning suite matching the exact topic of this document (e.g., if the book is Mathematics for Technology, create real calculus/algebra/differentiation/integration questions; if Computer Science, create programming/algorithm questions; etc.).
+Generate a comprehensive, curriculum-grade interactive learning suite with at least 10 in-depth quiz questions (distributed into Part 1 and Part 2) and 8 key concept flashcards matching the exact topic of this document.
 
 Output MUST be a valid JSON object matching this schema exactly without markdown formatting:
 {
   "quizzes": [
     {
-      "pageNumber": 10,
-      "title": "Module Knowledge Check",
+      "pageNumber": 6,
+      "title": "Module Knowledge Assessment (Part 1)",
       "questions": [
         {
-          "question": "Deep, high-quality multiple choice question based directly on the concepts and formulas in the excerpt",
+          "question": "Deep, high-quality multiple choice question based directly on the concepts in the excerpt",
           "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
           "correctIndex": 0,
           "explanation": "Detailed step-by-step explanation demonstrating why this option is correct."
+        },
+        {
+          "question": "Second analytical question testing understanding of definitions or steps",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Third question testing methodology or problem-solving application",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Fourth question testing boundary conditions or key principles",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Fifth question testing practical scenario or calculation",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        }
+      ]
+    },
+    {
+      "pageNumber": 14,
+      "title": "Advanced Mastery Assessment (Part 2)",
+      "questions": [
+        {
+          "question": "Sixth advanced question testing synthesis of multiple concepts",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Seventh question testing comparative analysis or error identification",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Eighth question testing optimization or advanced algorithms",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Ninth question testing measurement criteria or verification standards",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
+        },
+        {
+          "question": "Tenth comprehensive synthesis question",
+          "options": ["Accurate correct answer", "Plausible distractor 1", "Plausible distractor 2", "Plausible distractor 3"],
+          "correctIndex": 0,
+          "explanation": "Detailed explanation."
         }
       ]
     }
   ],
   "flashcards": [
     {
-      "pageNumber": 14,
-      "title": "Key Terminology & Recall Match Game",
+      "pageNumber": 10,
+      "title": "Key Terminology & Speed Match Game (8 Concepts)",
       "cards": [
         {
-          "term": "Key Concept or Formula Name from the document",
+          "term": "Key Concept 1 Name",
           "definition": "Clear, precise academic definition or formula application."
+        },
+        {
+          "term": "Key Concept 2 Name",
+          "definition": "Clear definition."
+        },
+        {
+          "term": "Key Concept 3 Name",
+          "definition": "Clear definition."
+        },
+        {
+          "term": "Key Concept 4 Name",
+          "definition": "Clear definition."
+        },
+        {
+          "term": "Key Concept 5 Name",
+          "definition": "Clear definition."
+        },
+        {
+          "term": "Key Concept 6 Name",
+          "definition": "Clear definition."
+        },
+        {
+          "term": "Key Concept 7 Name",
+          "definition": "Clear definition."
+        },
+        {
+          "term": "Key Concept 8 Name",
+          "definition": "Clear definition."
         }
       ]
     }
@@ -70,7 +158,7 @@ Output MUST be a valid JSON object matching this schema exactly without markdown
   }
 }
 
-Generate at least 4 thoughtful, analytical quiz questions and 4-6 flashcard concept pairs based on the text.
+Generate exactly 10 thoughtful, analytical quiz questions (5 in Part 1, 5 in Part 2) and 8 flashcard concept pairs based directly on the text excerpt.
 PROMPT;
 
         try {

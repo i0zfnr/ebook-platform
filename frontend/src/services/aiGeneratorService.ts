@@ -63,6 +63,7 @@ export async function extractDocumentTextSample(
 
 /**
  * Dynamic Heuristic Generator that extracts actual terms & headings from document text
+ * Generates 10 rich questions, 8 flashcards, and interactive activities
  */
 export function createHeuristicInteractiveElements(
   bookTitle: string,
@@ -72,75 +73,216 @@ export function createHeuristicInteractiveElements(
   const timestamp = Date.now();
 
   // Extract real keywords/sentences from document text
-  const lines = docText
-    .split(/\n|\. /)
+  const cleanSentences = docText
+    .split(/\n|\. |\? /)
     .map(l => l.replace(/\[PAGE \d+\]:/g, '').trim())
-    .filter(l => l.length > 15 && l.length < 120);
+    .filter(l => l.length > 25 && l.length < 150 && !l.startsWith('http'));
 
-  const keyConcepts = lines.slice(0, 8);
+  const concepts = cleanSentences.length >= 10
+    ? cleanSentences
+    : [
+        `${bookTitle} fundamental theories and definitions`,
+        'Methodological framework for problem analysis and execution',
+        'Mathematical formulas and empirical calculation techniques',
+        'Standard operational procedures and diagnostic criteria',
+        'Comparative analysis of core system components',
+        'Error prevention, verification, and boundary conditions',
+        'Practical implementation workflows in industrial practice',
+        'Optimization algorithms and performance efficiency',
+        'Data synthesis, measurement protocols, and evaluation',
+        'Advanced application scenarios and synthesis',
+      ];
 
-  const term1 = keyConcepts[0] || `${bookTitle} Core Concept`;
-  const term2 = keyConcepts[1] || `Key Principle and Methodology`;
-  const term3 = keyConcepts[2] || `Analytical Framework`;
-  const term4 = keyConcepts[3] || `Application and Practice`;
+  const getConcept = (idx: number, fallback: string) => concepts[idx] || fallback;
+
+  // Build 10 distinct interactive quiz questions
+  const quiz1Questions = [
+    {
+      id: 'q1_1',
+      question: `According to the material in ${bookTitle}, what is the primary purpose of "${getConcept(0, 'the core concept').substring(0, 60)}"?`,
+      options: [
+        `To establish the foundational methodology: ${getConcept(0, 'core principle').substring(0, 75)}.`,
+        'To serve as an optional reference without practical application.',
+        'To replace standard computational verification.',
+        'To limit operational scope to theoretical simulations only.',
+      ],
+      correctIndex: 0,
+      explanation: `The textbook highlights that understanding this principle is essential for correct domain modeling.`,
+    },
+    {
+      id: 'q1_2',
+      question: `When implementing "${getConcept(1, 'the methodology').substring(0, 50)}", which of the following represents the correct approach?`,
+      options: [
+        `Systematically applying ${getConcept(1, 'the methodology').substring(0, 70)} to verify outcomes.`,
+        'Bypassing initial parameter validation to accelerate processing.',
+        'Executing calculations without calibration standards.',
+        'Applying empirical estimates in place of proven formulas.',
+      ],
+      correctIndex: 0,
+      explanation: `Methodical execution requires adhering strictly to verified computational and analytical frameworks.`,
+    },
+    {
+      id: 'q1_3',
+      question: `In the analysis of "${getConcept(2, 'analytical calculations').substring(0, 50)}", what key variable must be controlled?`,
+      options: [
+        `The boundary conditions governing ${getConcept(2, 'system parameters').substring(0, 70)}.`,
+        'Arbitrary scaling factors added post-calculation.',
+        'External unrelated peripheral metrics.',
+        'Uncalibrated qualitative assumptions.',
+      ],
+      correctIndex: 0,
+      explanation: `Controlling boundary conditions ensures repeatability and high precision in empirical measurements.`,
+    },
+    {
+      id: 'q1_4',
+      question: `How does "${getConcept(3, 'standard protocol').substring(0, 50)}" contribute to overall system reliability?`,
+      options: [
+        `By preventing systematic drift through: ${getConcept(3, 'standard procedures').substring(0, 70)}.`,
+        'By removing the need for peer review or audits.',
+        'By enforcing static hardcoded values regardless of environment.',
+        'By restricting analytical evaluations to small sample sets.',
+      ],
+      correctIndex: 0,
+      explanation: `Standardized operational protocols eliminate procedural errors and maintain consistency.`,
+    },
+    {
+      id: 'q1_5',
+      question: `Which scenario best illustrates the practical application of "${getConcept(4, 'system components').substring(0, 50)}"?`,
+      options: [
+        `Deploying structured integration following: ${getConcept(4, 'workflow guidelines').substring(0, 70)}.`,
+        'Modifying core assumptions without baseline documentation.',
+        'Ignoring transient states during high-load processing.',
+        'Disregarding secondary error margins.',
+      ],
+      correctIndex: 0,
+      explanation: `Practical deployment requires structured integration aligned with documented operational guidelines.`,
+    },
+  ];
+
+  const quiz2Questions = [
+    {
+      id: 'q2_1',
+      question: `What distinguishes "${getConcept(5, 'error prevention techniques').substring(0, 50)}" from standard diagnostic checks?`,
+      options: [
+        `It proactively verifies ${getConcept(5, 'safety parameters').substring(0, 75)}.`,
+        'It is only performed after fatal system termination.',
+        'It requires no mathematical or algorithmic baseline.',
+        'It applies solely to legacy architectural formats.',
+      ],
+      correctIndex: 0,
+      explanation: `Proactive verification identifies boundary anomalies before cascading errors propagate.`,
+    },
+    {
+      id: 'q2_2',
+      question: `In evaluating "${getConcept(6, 'implementation workflows').substring(0, 50)}", what metric indicates optimal performance?`,
+      options: [
+        `Consistent alignment with ${getConcept(6, 'performance benchmarks').substring(0, 70)}.`,
+        'Maximum resource consumption without output scaling.',
+        'High variance across identical test iterations.',
+        'Total reliance on unverified heuristic estimates.',
+      ],
+      correctIndex: 0,
+      explanation: `Optimal performance is confirmed by consistent benchmark adherence and minimal error variance.`,
+    },
+    {
+      id: 'q2_3',
+      question: `Why is "${getConcept(7, 'optimization algorithms').substring(0, 50)}" critical in advanced applications?`,
+      options: [
+        `It maximizes computational efficiency based on: ${getConcept(7, 'efficiency models').substring(0, 70)}.`,
+        'It eliminates the need for data structure design.',
+        'It prevents any future system scalability.',
+        'It reduces accuracy to achieve arbitrary speed gains.',
+      ],
+      correctIndex: 0,
+      explanation: `Mathematical optimization reduces complexity while maintaining rigorous accuracy standards.`,
+    },
+    {
+      id: 'q2_4',
+      question: `How should practitioners interpret data synthesis under "${getConcept(8, 'measurement protocols').substring(0, 50)}"?`,
+      options: [
+        `By evaluating confidence intervals and: ${getConcept(8, 'statistical validity').substring(0, 70)}.`,
+        'By discarding negative results to report uniform positive trends.',
+        'By assuming equal weight for uncalibrated sensor noise.',
+        'By substituting simulated outputs for actual field measurements.',
+      ],
+      correctIndex: 0,
+      explanation: `Scientific data synthesis requires evaluating standard error margins and statistical validity.`,
+    },
+    {
+      id: 'q2_5',
+      question: `When synthesizing advanced topics in ${bookTitle}, what is the final synthesis milestone?`,
+      options: [
+        `Seamless integration of theory, computation, and ${getConcept(9, 'practical mastery').substring(0, 65)}.`,
+        'Memorization of isolated terms without contextual application.',
+        'Limiting problem sets to pre-solved textbook examples.',
+        'Abandoning formal notation in favor of informal guesswork.',
+      ],
+      correctIndex: 0,
+      explanation: `Mastery represents the holistic capability to apply theoretical, mathematical, and practical concepts to novel problems.`,
+    },
+  ];
+
+  // Distribute quizzes across early and later pages
+  const midPage = Math.max(2, Math.floor(totalPages * 0.4));
+  const latePage = Math.min(totalPages, Math.max(midPage + 2, Math.floor(totalPages * 0.8)));
 
   return [
     {
-      id: `ai_quiz_${timestamp}`,
-      pageNumber: Math.min(totalPages > 15 ? 10 : Math.max(2, Math.floor(totalPages / 2)), totalPages),
+      id: `ai_quiz_${timestamp}_part1`,
+      pageNumber: Math.min(totalPages > 6 ? midPage : 2, totalPages),
       type: 'quiz',
-      title: `${bookTitle}: Knowledge Assessment`,
-      description: 'Test your understanding with instant grading and explanations.',
+      title: `${bookTitle}: Knowledge Assessment (Part 1 - 5 Questions)`,
+      description: 'Test your foundational understanding with instant scoring and detailed explanations.',
       data: {
-        questions: [
-          {
-            id: 'q1',
-            question: `Which fundamental principle is central to the topics covered in ${bookTitle}?`,
-            options: [
-              term1.substring(0, 90),
-              'Unrelated theoretical assumption',
-              'Legacy hardware dependency',
-              'None of the above',
-            ],
-            correctIndex: 0,
-            explanation: `Based on the text: "${term1.substring(0, 120)}" forms an essential foundational component.`,
-          },
-          {
-            id: 'q2',
-            question: `In the study of this subject, how is ${term2.substring(0, 40)} correctly applied?`,
-            options: [
-              `By systematically applying ${term2.substring(0, 70)} to achieve verified results.`,
-              'By bypassing standard methodology without verification.',
-              'Only during initial software installation.',
-              'Exclusively in theoretical simulations.',
-            ],
-            correctIndex: 0,
-            explanation: `Proper execution requires methodical implementation as outlined in the curriculum.`,
-          },
-        ],
+        questions: quiz1Questions,
+      },
+    },
+    {
+      id: `ai_quiz_${timestamp}_part2`,
+      pageNumber: latePage,
+      type: 'quiz',
+      title: `${bookTitle}: Advanced Mastery Assessment (Part 2 - 5 Questions)`,
+      description: 'Challenge your deep conceptual and applied knowledge across the module.',
+      data: {
+        questions: quiz2Questions,
       },
     },
     {
       id: `ai_flash_${timestamp}_1`,
-      pageNumber: Math.min(totalPages > 20 ? 14 : Math.max(3, Math.floor(totalPages * 0.75)), totalPages),
+      pageNumber: Math.min(totalPages > 10 ? Math.max(3, Math.floor(totalPages * 0.6)) : 2, totalPages),
       type: 'flashcards',
-      title: `${bookTitle}: Key Terms & Speed Match Game`,
-      description: 'Practice term recall with 3D flip cards and Speed Match Game.',
+      title: `${bookTitle}: Key Terms & Speed Match Game (8 Concepts)`,
+      description: 'Practice active recall with 3D flip cards and the interactive Speed Match Game.',
       data: {
         cards: [
-          { id: 'f1', term: term1.substring(0, 35), definition: term1 },
-          { id: 'f2', term: term2.substring(0, 35), definition: term2 },
-          { id: 'f3', term: term3.substring(0, 35), definition: term3 },
-          { id: 'f4', term: term4.substring(0, 35), definition: term4 },
+          { id: 'f1', term: getConcept(0, 'Core Concept').substring(0, 35), definition: getConcept(0, 'Foundational rule defining how the system functions.') },
+          { id: 'f2', term: getConcept(1, 'Methodology').substring(0, 35), definition: getConcept(1, 'The methodical workflow applied in practical exercises.') },
+          { id: 'f3', term: getConcept(2, 'Analytical Framework').substring(0, 35), definition: getConcept(2, 'Mathematical formulation and evaluation criteria.') },
+          { id: 'f4', term: getConcept(3, 'Operational Standard').substring(0, 35), definition: getConcept(3, 'Standard diagnostic criteria and quality protocols.') },
+          { id: 'f5', term: getConcept(4, 'System Integration').substring(0, 35), definition: getConcept(4, 'Comparative integration of primary and secondary modules.') },
+          { id: 'f6', term: getConcept(5, 'Error Prevention').substring(0, 35), definition: getConcept(5, 'Boundary validation rules preventing calculation drift.') },
+          { id: 'f7', term: getConcept(6, 'Performance Optimization').substring(0, 35), definition: getConcept(6, 'Efficiency algorithms optimizing throughput and speed.') },
+          { id: 'f8', term: getConcept(7, 'Advanced Synthesis').substring(0, 35), definition: getConcept(7, 'Holistic application combining theory with practical implementation.') },
         ],
       },
     },
     {
-      id: `ai_video_${timestamp}_2`,
-      pageNumber: Math.min(totalPages > 10 ? 4 : 2, totalPages),
+      id: `ai_video_${timestamp}_1`,
+      pageNumber: Math.min(totalPages > 10 ? 3 : 1, totalPages),
       type: 'video',
-      title: `${bookTitle}: Video Lecture`,
-      description: 'Curated educational video lesson matching core textbook concepts.',
+      title: `${bookTitle}: Core Lecture Lesson`,
+      description: 'Curated video lesson covering fundamental principles and worked examples.',
+      data: {
+        youtubeUrl: 'https://www.youtube.com/watch?v=xxpc-HPKN28',
+        videoId: 'xxpc-HPKN28',
+      },
+    },
+    {
+      id: `ai_video_${timestamp}_2`,
+      pageNumber: Math.min(totalPages > 14 ? 7 : Math.max(2, totalPages - 1), totalPages),
+      type: 'video',
+      title: `${bookTitle}: Advanced Problem Solving Walkthrough`,
+      description: 'In-depth visual walkthrough of complex problems and derivations.',
       data: {
         youtubeUrl: 'https://www.youtube.com/watch?v=xxpc-HPKN28',
         videoId: 'xxpc-HPKN28',
