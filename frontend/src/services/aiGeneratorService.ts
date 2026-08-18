@@ -61,6 +61,55 @@ export async function extractDocumentTextSample(
   return combined;
 }
 
+const METADATA_BLACKLIST = [
+  /nama\s+pensyarah/i,
+  /pensyarah/i,
+  /lecturer/i,
+  /instructor/i,
+  /nama\s+pelajar/i,
+  /nama\s+murid/i,
+  /no\.?\s*pendaftaran/i,
+  /no\.?\s*matrik/i,
+  /no\.?\s*kp/i,
+  /matric/i,
+  /politeknik/i,
+  /kolej/i,
+  /universiti/i,
+  /university/i,
+  /jabatan/i,
+  /kementerian/i,
+  /fakulti/i,
+  /disemak\s+oleh/i,
+  /disediakan\s+oleh/i,
+  /prepared\s+by/i,
+  /reviewed\s+by/i,
+  /approved\s+by/i,
+  /written\s+by/i,
+  /author/i,
+  /penulis/i,
+  /copyright/i,
+  /hakcipta/i,
+  /sesi\s+\d+/i,
+  /semester\s+\d+/i,
+  /table\s+of\s+contents/i,
+  /isi\s+kandungan/i,
+  /senarai\s+kandungan/i,
+  /learning\s+outcomes/i,
+  /hasil\s+pembelajaran/i,
+  /wan\s+izyani/i,
+  /\bbinti\b/i,
+  /\bbin\b/i,
+];
+
+function isAcademicConcept(str: string): boolean {
+  if (!str || str.length < 15 || str.length > 130) return false;
+  if (str.startsWith('http') || str.includes('www.')) return false;
+  for (const pattern of METADATA_BLACKLIST) {
+    if (pattern.test(str)) return false;
+  }
+  return true;
+}
+
 /**
  * Dynamic Heuristic Generator that extracts actual terms & headings from document text
  * Generates 10 rich questions, 8 flashcards, and interactive activities
@@ -72,11 +121,12 @@ export function createHeuristicInteractiveElements(
 ): InteractiveElement[] {
   const timestamp = Date.now();
 
-  // Extract real keywords/sentences from document text
-  const cleanSentences = docText
+  // Extract real keywords/sentences from document text, skipping cover/metadata
+  const rawSentences = docText
     .split(/\n|\. |\? /)
-    .map(l => l.replace(/\[PAGE \d+\]:/g, '').trim())
-    .filter(l => l.length > 25 && l.length < 150 && !l.startsWith('http'));
+    .map(l => l.replace(/\[PAGE \d+\]:/g, '').trim());
+
+  const cleanSentences = rawSentences.filter(isAcademicConcept);
 
   const concepts = cleanSentences.length >= 10
     ? cleanSentences

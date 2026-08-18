@@ -731,10 +731,23 @@ Output MUST be a valid JSON object matching this schema exactly without markdown
         }
     }
 
-    // Fallback if AI key missing or request failed: create 10 high-quality questions
+    // Fallback if AI key missing or request failed: create 10 high-quality academic questions
     if (empty($elements)) {
-        $cleanSentences = array_values(array_filter(array_map('trim', preg_split('/\n|\. |\? /', $textSample)), function ($s) {
-            return strlen($s) > 20 && strlen($s) < 140;
+        $metaBlacklist = [
+            'nama pensyarah', 'pensyarah', 'lecturer', 'instructor', 'nama pelajar', 'nama murid',
+            'no pendaftaran', 'no. pendaftaran', 'matrik', 'matric', 'politeknik', 'kolej', 'universiti',
+            'jabatan', 'kementerian', 'fakulti', 'disemak oleh', 'disediakan oleh', 'prepared by',
+            'reviewed by', 'author', 'penulis', 'copyright', 'hakcipta', 'table of contents', 'isi kandungan',
+            'wan izyani', 'binti', 'bin '
+        ];
+
+        $cleanSentences = array_values(array_filter(array_map('trim', preg_split('/\n|\. |\? /', $textSample)), function ($s) use ($metaBlacklist) {
+            if (strlen($s) < 20 || strlen($s) > 140 || str_starts_with($s, 'http')) return false;
+            $lower = strtolower($s);
+            foreach ($metaBlacklist as $bad) {
+                if (str_contains($lower, $bad)) return false;
+            }
+            return true;
         }));
 
         $c = function ($idx, $default) use ($cleanSentences) {
