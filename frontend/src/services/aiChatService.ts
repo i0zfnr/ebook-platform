@@ -39,18 +39,16 @@ async function callDirectGemini(
   if (apiKey) {
     const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
     
-    let systemPrompt = `You are Aura, an elite, patient academic AI tutor designed for university and Politeknik students.
-Your goal is to explain concepts clearly, provide step-by-step calculus/engineering/programming solutions, use formatted markdown with bold terms and code blocks, and encourage active learning.`;
+    let systemPrompt = `You are Aura AI, an expert academic research assistant and university tutor.
+Your sole purpose is to help students with scholarly research, deep conceptual understanding, mathematical derivations, step-by-step problem solving, and synthesis of the textbook topics they are reading.
+- The student is studying "${context?.bookTitle || 'Academic Textbook'}" (currently on Page ${context?.currentPage || 1}).
+${context?.pageText ? `Page excerpt:\n"""\n${context.pageText.substring(0, 1500)}\n"""\n` : ''}
 
-    if (context?.bookTitle) {
-      systemPrompt += `\nThe student is currently studying the textbook "${context.bookTitle}".`;
-    }
-    if (context?.currentPage) {
-      systemPrompt += ` They are currently reading Page ${context.currentPage}.`;
-    }
-    if (context?.pageText) {
-      systemPrompt += `\nHere is context from the active page:\n"""\n${context.pageText.substring(0, 1500)}\n"""`;
-    }
+Behavioral Guidelines:
+1. Conduct clear, thorough academic research and pedagogical explanations for the student's question.
+2. Provide step-by-step mathematical formulas, derivations, and engineering reasoning formatted in clean Markdown.
+3. Be encouraging, concise, scholarly, and encourage deep scientific curiosity.
+4. Only assist with educational, scientific, research, and textbook topics. Do not engage in harmful, destructive, or irrelevant activities.`;
 
     const contents: any[] = [];
 
@@ -147,7 +145,7 @@ export const aiChatService = {
           current_page: context?.currentPage,
           page_text: context?.pageText,
         },
-        { timeout: 8000 }
+        { timeout: 25000 }
       );
 
       if (response.data?.success && response.data?.reply) {

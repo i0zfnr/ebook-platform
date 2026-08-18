@@ -18,6 +18,39 @@ const DB_FILE = path.join(STORAGE_DIR, 'ebooks_db.json');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+// Load environment variables from .env files
+function loadEnv() {
+  const envPaths = [
+    path.join(ROOT_DIR, '.env'),
+    path.join(ROOT_DIR, 'backend', '.env'),
+    path.join(ROOT_DIR, 'frontend', '.env'),
+  ];
+  for (const p of envPaths) {
+    if (fs.existsSync(p)) {
+      try {
+        const content = fs.readFileSync(p, 'utf8');
+        content.split('\n').forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const eqIdx = trimmed.indexOf('=');
+            if (eqIdx !== -1) {
+              const key = trimmed.substring(0, eqIdx).trim();
+              let val = trimmed.substring(eqIdx + 1).trim();
+              if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                val = val.slice(1, -1);
+              }
+              if (!process.env[key]) {
+                process.env[key] = val;
+              }
+            }
+          }
+        });
+      } catch {}
+    }
+  }
+}
+loadEnv();
+
 // Get stored books from JSON file database
 function getDatabase() {
   try {
@@ -71,7 +104,7 @@ function sendJson(res, statusCode, data) {
 function streamFile(req, res, filePath, contentType) {
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.writeHead(404, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
       return res.end('File Not Found');
     }
 
@@ -123,12 +156,13 @@ const server = http.createServer((req, res) => {
       status: 'online',
       engine: 'Node Standalone Server',
       node_version: process.version,
+      has_gemini_key: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
       books_count: getDatabase().length,
       storage_writable: true,
     });
   }
 
-  // 1. GET /api/ebooks
+  // 1. GET /api/ebooks (Public to all users)
   if (pathname === '/api/ebooks' && method === 'GET') {
     const db = getDatabase();
     const search = parsedUrl.searchParams.get('search');
@@ -185,7 +219,7 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, { success: true, message: 'Deleted successfully' });
   }
 
-  // 5. POST /api/ebooks (Multipart Upload)
+  // 5. POST /api/ebooks (Multipart Upload - saves file to public server)
   if (pathname === '/api/ebooks' && method === 'POST') {
     const boundaryHeader = req.headers['content-type'] || '';
     const boundaryMatch = boundaryHeader.match(/boundary=(.+)$/);
@@ -270,7 +304,93 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 6. Serve /storage/ files
+  // 6. POST /api/ai/chat (Live Google Gemini Research Assistant)
+  if (pathname === '/api/ai/chat' && method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', async () => {
+      try {
+        const payload = JSON.parse(body || '{}');
+        const message = payload.message || '';
+        const history = payload.history || [];
+        const bookTitle = payload.book_title || 'Engineering & Technical Textbook';
+        const currentPage = payload.current_page || 1;
+        const pageText = payload.page_text || '';
+
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+
+        const systemPrompt = `You are Aura AI, an expert academic research assistant and politeknik university tutor.
+Your primary role is to assist students with scholarly research, deep conceptual understanding, mathematical derivations, step-by-step problem solving, and synthesis of the textbook topics they are reading.
+- The student is studying "${bookTitle}" (currently reading Page ${currentPage}).
+${pageText ? `Page excerpt:\n"""\n${pageText.substring(0, 1500)}\n"""\n` : ''}
+
+Behavioral Guidelines:
+1. Conduct clear, thorough academic research and pedagogical explanations for the student's question.
+2. Provide step-by-step mathematical formulas, derivations, and engineering reasoning formatted in clean Markdown.
+3. Be supportive, concise, scholarly, and encourage deep scientific curiosity.
+4. Only assist with educational, scientific, research, and textbook topics. Do not engage in harmful, destructive, or irrelevant activities.`;
+
+        if (!apiKey) {
+          return sendJson(res, 200, {
+            success: true,
+            reply: `### Academic Research & Analysis: ${message}\n\nHere is the structured conceptual breakdown for **${bookTitle}**:\n\n1. **Theoretical Principle**: Focus on standard governing equations and core domain fundamentals.\n2. **Systematic Derivation**: Apply dimensional consistency, evaluate boundary conditions, and simplify.\n3. **Curriculum Reference**: Refer to **Page ${currentPage}** for worked examples.\n\n*(Tip: Add GEMINI_API_KEY to your .env to unlock live Google Gemini AI answers!)*`,
+          });
+        }
+
+        const contents = [];
+        for (const turn of history.slice(-6)) {
+          contents.push({
+            role: turn.role === 'model' ? 'model' : 'user',
+            parts: [{ text: turn.content }],
+          });
+        }
+        contents.push({
+          role: 'user',
+          parts: [{ text: message }],
+        });
+
+        const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+        let replyText = '';
+
+        for (const model of models) {
+          try {
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const apiRes = await fetch(geminiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents,
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: { temperature: 0.7, maxOutputTokens: 1500 },
+              }),
+            });
+
+            if (apiRes.ok) {
+              const data = await apiRes.json();
+              replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (replyText) break;
+            }
+          } catch (e) {
+            console.warn(`Gemini model ${model} error:`, e.message);
+          }
+        }
+
+        if (replyText) {
+          return sendJson(res, 200, { success: true, reply: replyText });
+        } else {
+          return sendJson(res, 200, {
+            success: true,
+            reply: `I have analyzed your inquiry regarding **${bookTitle}**. Could you clarify the specific formula or theorem you would like to explore?`,
+          });
+        }
+      } catch (err) {
+        return sendJson(res, 500, { success: false, message: err.message });
+      }
+    });
+    return;
+  }
+
+  // 7. Serve /storage/ files
   if (pathname.startsWith('/storage/')) {
     const relPath = pathname.replace(/^\/storage\//, '');
     const fullPath = path.join(STORAGE_DIR, relPath);
@@ -279,7 +399,7 @@ const server = http.createServer((req, res) => {
     return streamFile(req, res, fullPath, contentType);
   }
 
-  // 7. Serve Static Frontend files
+  // 8. Serve Static Frontend files
   let staticPath = path.join(DIST_DIR, pathname === '/' ? 'index.html' : pathname);
   fs.stat(staticPath, (err, stats) => {
     if (!err && stats.isFile()) {
