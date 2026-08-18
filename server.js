@@ -18,7 +18,7 @@ const DB_FILE = path.join(STORAGE_DIR, 'ebooks_db.json');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// Seed default book if database is empty
+// Get stored books from JSON file database
 function getDatabase() {
   try {
     if (fs.existsSync(DB_FILE)) {
@@ -28,29 +28,7 @@ function getDatabase() {
   } catch (e) {
     console.error('Error reading database:', e);
   }
-
-  const initial = [
-    {
-      id: 1,
-      title: 'DBM10213 Mathematics for Technology 2',
-      slug: 'dbm10213-mathematics-for-technology-2',
-      author: 'Jabatan Matematik, Sains & Komputer',
-      description: 'Comprehensive engineering calculus module covering Differentiation, Integration, and practical applications in engineering.',
-      pdf_path: 'ebooks/sample.pdf',
-      pdf_url: '/storage/ebooks/sample.pdf',
-      cover_path: null,
-      cover_url: null,
-      original_filename: 'DBM10213_MATHEMATICS_2.pdf',
-      file_size: 39600000,
-      total_pages: 120,
-      status: 'published',
-      interactive_elements: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
-  fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
-  return initial;
+  return [];
 }
 
 function saveDatabase(data) {

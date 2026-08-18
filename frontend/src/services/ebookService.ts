@@ -3,26 +3,6 @@ import type { ApiResponse, Ebook } from '../types/ebook';
 import type { AxiosProgressEvent } from 'axios';
 import { localBookStorage } from './localBookStorage';
 
-// Built-in seed textbook for instant out-of-the-box reading
-const DEFAULT_SEED_EBOOK: Ebook = {
-  id: 1,
-  title: 'DBM10213 Mathematics for Technology 2',
-  slug: 'dbm10213-mathematics-for-technology-2',
-  author: 'Jabatan Matematik, Sains & Komputer',
-  description: 'Comprehensive engineering calculus module covering Differentiation, Integration, and practical applications in engineering.',
-  pdf_path: 'ebooks/sample.pdf',
-  pdf_url: '/storage/ebooks/sample.pdf',
-  cover_path: null,
-  cover_url: null,
-  original_filename: 'DBM10213_MATHEMATICS_2.pdf',
-  file_size: 39600000,
-  total_pages: 120,
-  status: 'published',
-  interactive_elements: undefined,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 export const ebookService = {
   /**
    * Fetch all ebooks, merging backend data and local IndexedDB books
@@ -46,25 +26,21 @@ export const ebookService = {
         backendBooks = response.data.data;
       }
     } catch {
-      // Backend unavailable on static hosting, use local storage
+      // Backend unavailable, use local storage
     }
 
     // Merge unique books (by ID and slug)
     const combined = [...localBooks];
     for (const b of backendBooks) {
-      if (!combined.some(item => item.id === b.id || item.slug === b.slug)) {
+      if (!combined.some((item) => item.id === b.id || item.slug === b.slug)) {
         combined.push(b);
       }
-    }
-
-    if (combined.length === 0) {
-      combined.push(DEFAULT_SEED_EBOOK);
     }
 
     if (search && search.trim()) {
       const q = search.toLowerCase();
       return combined.filter(
-        b => b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q))
+        (b) => b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q))
       );
     }
 
@@ -94,22 +70,13 @@ export const ebookService = {
       return localBook;
     }
 
-    // Check default seed book
-    const str = String(idOrSlug).toLowerCase();
-    if (str === '1' || str === DEFAULT_SEED_EBOOK.slug || str.includes('dbm10213') || str.includes('chapter1')) {
-      return {
-        ...DEFAULT_SEED_EBOOK,
-        slug: String(idOrSlug),
-      };
-    }
-
     // Synthesize readable metadata fallback
     return {
       id: typeof idOrSlug === 'number' ? idOrSlug : Date.now(),
-      title: String(idOrSlug).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      title: String(idOrSlug).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       slug: String(idOrSlug),
-      author: 'Politeknik Besut',
-      description: 'Educational module and lecture notes.',
+      author: 'Lecturer',
+      description: '',
       pdf_path: `ebooks/${idOrSlug}.pdf`,
       pdf_url: `/storage/ebooks/${idOrSlug}.pdf`,
       cover_path: null,
