@@ -135,30 +135,26 @@ export const ebookService = {
       await localBookStorage.saveBook(newLocalBook, pdfFile);
     }
 
-    // Try posting to backend if available
+    // Post to server backend with generous timeout for large educational PDFs
     try {
       const response = await api.post<ApiResponse<Ebook>>('/ebooks', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
         onUploadProgress: (progressEvent: AxiosProgressEvent) => {
           if (progressEvent.total && onProgress) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             onProgress(percent);
           }
         },
-        timeout: 20000,
+        timeout: 300000, // 5 minutes for large PDFs
       });
 
       if (response.data?.data) {
-        // Save backend result to IndexedDB as well
         if (pdfFile) {
           await localBookStorage.saveBook(response.data.data, pdfFile);
         }
         return response.data.data;
       }
-    } catch {
-      console.info('Backend upload deferred, book saved securely to client IndexedDB.');
+    } catch (e: any) {
+      console.warn('Backend upload notice:', e?.message);
       if (onProgress) onProgress(100);
     }
 
