@@ -22,35 +22,25 @@ export const ebookService = {
         return response.data.data;
       }
     } catch (err) {
-      console.warn('Backend unavailable, checking local fallback:', err);
+      console.error('Failed to load ebooks from database:', err);
     }
 
-    const localBooks = localBookStorage.getLocalEbooksSync();
-    return localBooks;
+    return [];
   },
 
   /**
-   * Fetch single ebook by ID or Slug from cloud MySQL database
+   * Fetch single ebook by ID or Slug directly from cloud MySQL database
    */
   async getEbook(idOrSlug: string | number): Promise<Ebook> {
-    try {
-      const response = await api.get<ApiResponse<Ebook>>(`/ebooks/${idOrSlug}`, {
-        timeout: 10000,
-      });
+    const response = await api.get<ApiResponse<Ebook>>(`/ebooks/${idOrSlug}`, {
+      timeout: 10000,
+    });
 
-      if (response.data && response.data.data && typeof response.data.data === 'object' && response.data.data.title) {
-        return response.data.data;
-      }
-    } catch (err) {
-      console.warn('Backend getEbook error:', err);
+    if (response.data && response.data.data && typeof response.data.data === 'object' && response.data.data.title) {
+      return response.data.data;
     }
 
-    const localBook = localBookStorage.getLocalEbookSync(idOrSlug);
-    if (localBook) {
-      return localBook;
-    }
-
-    throw new Error('E-Book not found on server or database.');
+    throw new Error('E-Book not found in database.');
   },
 
   /**
