@@ -74,8 +74,6 @@ const pdfDocCache = new Map<string, Promise<pdfjsLib.PDFDocumentProxy>>();
 const thumbnailCache = new Map<string, string>();
 const pageTextCache = new Map<string, string[]>();
 
-import { localBookStorage } from './localBookStorage';
-
 /**
  * Store uploaded PDF file/buffer in memory cache so ReaderPage can open it immediately
  */
@@ -103,40 +101,22 @@ export function cacheUploadedPdf(key: string | number, source: File | ArrayBuffe
 }
 
 /**
- * Load PDF document from URL or IndexedDB (cached promise for zero duplicate network requests)
+ * Load PDF document directly from Cloud Server API
  */
 export function loadPdfDocument(url: string, bookIdentifier?: string | number): Promise<pdfjsLib.PDFDocumentProxy> {
   const finalUrl = normalizePdfUrl(url);
-
-  if (bookIdentifier && pdfDocCache.has(String(bookIdentifier))) {
-    return pdfDocCache.get(String(bookIdentifier))!;
-  }
 
   if (pdfDocCache.has(finalUrl)) {
     return pdfDocCache.get(finalUrl)!;
   }
 
   const loadPromise = (async () => {
-    // Attempt 1: Check IndexedDB local storage
-    if (bookIdentifier) {
-      const localBuffer = await localBookStorage.getPdfBuffer(bookIdentifier);
-      if (localBuffer) {
-        const typedArray = new Uint8Array(localBuffer);
-        const loadingTask = pdfjsLib.getDocument({
-          data: typedArray,
-          cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
-          cMapPacked: true,
-        });
-        return await loadingTask.promise;
-      }
-    }
-
-    // Attempt 2: Fetch through normalized URL (and verify it's actual PDF binary, not HTML)
+    // 1. Fetch through server URL (and verify it's actual PDF binary)
     try {
       const response = await fetch(finalUrl);
       const contentType = response.headers.get('content-type') || '';
       if (!response.ok || contentType.includes('text/html')) {
-        throw new Error(`Invalid PDF response: ${contentType || response.statusText}`);
+        throw new Error(`Server returned ${response.status} ${response.statusText} (${contentType})`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
@@ -151,34 +131,13 @@ export function loadPdfDocument(url: string, bookIdentifier?: string | number): 
           cMapPacked: true,
         });
         return await loadingTask.promise;
+      } else {
+        throw new Error('Downloaded file is not a valid PDF binary.');
       }
-    } catch (err) {
-      console.warn('Fetch PDF failed or returned HTML fallback, attempting alternate routes...', err);
+    } catch (err: any) {
+      console.error('Fetch PDF directly from server error:', err);
+      throw err;
     }
-
-    // Attempt 3: Direct fallback to /storage/ or sample documents
-    if (finalUrl.includes('/api/ebooks/')) {
-      const slug = finalUrl.split('/api/ebooks/')[1]?.split('/')[0];
-      if (slug) {
-        try {
-          const fallbackUrl = `/storage/ebooks/${slug}.pdf`;
-          const response = await fetch(fallbackUrl);
-          const contentType = response.headers.get('content-type') || '';
-          if (response.ok && !contentType.includes('text/html')) {
-            const arrayBuffer = await response.arrayBuffer();
-            const typedArray = new Uint8Array(arrayBuffer);
-            const loadingTask = pdfjsLib.getDocument({
-              data: typedArray,
-              cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
-              cMapPacked: true,
-            });
-            return await loadingTask.promise;
-          }
-        } catch {}
-      }
-    }
-
-    throw new Error(`Failed to load PDF document from ${finalUrl}`);
   })();
 
   pdfDocCache.set(finalUrl, loadPromise);

@@ -59,10 +59,6 @@ export const ebookService = {
     });
 
     if (response.data?.data) {
-      const pdfFile = formData.get('pdf') as File | null;
-      if (pdfFile) {
-        await localBookStorage.saveBook(response.data.data, pdfFile);
-      }
       return response.data.data;
     }
 

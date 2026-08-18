@@ -18,10 +18,8 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { ebookService, formatBytes } from '../services/ebookService';
-import { loadPdfDocument, cacheUploadedPdf } from '../services/pdfService';
+import { loadPdfDocument } from '../services/pdfService';
 import { generateAiLive, saveInteractiveElements } from '../services/aiGeneratorService';
-import { localBookStorage } from '../services/localBookStorage';
-import type { Ebook } from '../types/ebook';
 import type { InteractiveElement } from '../types/interactive';
 
 export const UploadPage: React.FC = () => {
@@ -165,25 +163,6 @@ export const UploadPage: React.FC = () => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)+/g, '') || `ebook-${Date.now()}`;
 
-      const localBook: Ebook = {
-        id: Date.now(),
-        title: title.trim(),
-        slug: localSlug,
-        author: author.trim() || 'Lecturer',
-        description: description.trim(),
-        pdf_path: `ebooks/${localSlug}.pdf`,
-        pdf_url: `/api/ebooks/${localSlug}/file`,
-        cover_path: null,
-        cover_url: coverPreview || null,
-        original_filename: pdfFile.name,
-        file_size: pdfFile.size,
-        total_pages: totalPages || null,
-        status: 'published',
-        interactive_elements: generatedElements.length > 0 ? generatedElements : undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
       // 1. Prepare payload for cloud MySQL server sync
       const formData = new FormData();
       formData.append('title', title.trim());
@@ -205,16 +184,11 @@ export const UploadPage: React.FC = () => {
 
       const finalSlug = result?.slug || localSlug;
 
-      // 3. Cache PDF locally for instant 0ms reader opening
-      cacheUploadedPdf(finalSlug, pdfFile);
-      if (result?.id) cacheUploadedPdf(result.id, pdfFile);
-      await localBookStorage.saveBook(result || localBook, pdfFile);
-
       if (generatedElements.length > 0) {
         saveInteractiveElements(finalSlug, generatedElements);
       }
 
-      // 4. Navigate only after upload is 100% finished
+      // 3. Navigate directly to the cloud book
       navigate(`/read/${finalSlug}`);
     } catch (err: any) {
       console.error('Upload error:', err);
