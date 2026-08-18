@@ -18,8 +18,14 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [L]
+    # Route ALL /api/* requests to standalone_api.php (PHP backend)
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^ standalone_api.php [L]
+
+    # Serve static files (JS, CSS, images, fonts) directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # For all other routes (/upload, /library, /read/*), serve React SPA index.html
+    RewriteRule ^ index.html [L]
 </IfModule>
