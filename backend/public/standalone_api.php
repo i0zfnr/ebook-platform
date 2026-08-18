@@ -19,24 +19,41 @@ if (!is_dir($ebooksDir)) {
     @mkdir($ebooksDir, 0777, true);
 }
 
-// Load .env
-$envFile = $rootDir . '/.env';
+// Load .env from root, backend, and system environment
+$envPaths = [
+    dirname(__DIR__, 2) . '/.env',
+    dirname(__DIR__) . '/.env',
+    $rootDir . '/.env',
+];
+
 $env = [];
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line && $line[0] !== '#') {
-            $parts = explode('=', $line, 2);
-            if (count($parts) === 2) {
-                $k = trim($parts[0]);
-                $v = trim($parts[1]);
-                if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
-                    $v = substr($v, 1, -1);
+foreach ($envPaths as $envFile) {
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line && $line[0] !== '#') {
+                $parts = explode('=', $line, 2);
+                if (count($parts) === 2) {
+                    $k = trim($parts[0]);
+                    $v = trim($parts[1]);
+                    if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
+                        $v = substr($v, 1, -1);
+                    }
+                    if (!isset($env[$k])) {
+                        $env[$k] = $v;
+                    }
                 }
-                $env[$k] = $v;
             }
         }
+    }
+}
+
+// Fallback to getenv() and $_ENV
+foreach (['GEMINI_API_KEY', 'VITE_GEMINI_API_KEY', 'DB_CONNECTION', 'DB_HOST', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'] as $key) {
+    if (empty($env[$key])) {
+        $val = getenv($key) ?: ($_ENV[$key] ?? ($_SERVER[$key] ?? ''));
+        if ($val) $env[$key] = $val;
     }
 }
 
