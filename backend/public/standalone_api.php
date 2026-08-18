@@ -525,5 +525,36 @@ if (str_starts_with($uri, '/storage/')) {
     streamFile($full);
 }
 
-// 9. Fallback
+// 9. Static Asset & SPA Frontend Fallback
+$staticFile = __DIR__ . $uri;
+if (is_file($staticFile) && $uri !== '/' && !str_ends_with($uri, '.php')) {
+    $ext = strtolower(pathinfo($staticFile, PATHINFO_EXTENSION));
+    $mimes = [
+        'js' => 'application/javascript',
+        'mjs' => 'application/javascript',
+        'css' => 'text/css',
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'ico' => 'image/x-icon',
+        'woff2' => 'font/woff2',
+        'woff' => 'font/woff',
+        'ttf' => 'font/ttf',
+    ];
+    $contentType = $mimes[$ext] ?? 'application/octet-stream';
+    header("Content-Type: $contentType");
+    header('Access-Control-Allow-Origin: *');
+    readfile($staticFile);
+    exit;
+}
+
+// Serve Latest Frontend SPA for all routes (/, /library, /upload, /read/*)
+$indexHtml = __DIR__ . '/index.html';
+if (file_exists($indexHtml)) {
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    readfile($indexHtml);
+    exit;
+}
+
 sendJson(['status' => 'not_found', 'uri' => $uri], 404);
