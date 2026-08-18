@@ -288,8 +288,33 @@ if (preg_match('#^/api/ebooks/([^/]+)/file$#', $uri, $m) && $method === 'GET') {
     }
 
     $filename = $found && !empty($found['pdf_path']) ? basename($found['pdf_path']) : "$idOrSlug.pdf";
-    $targetFile = $ebooksDir . '/' . $filename;
-    streamFile($targetFile, 'application/pdf');
+    $candidatePaths = [
+        $ebooksDir . '/' . $filename,
+        $rootDir . '/storage/app/public/ebooks/' . $filename,
+        dirname($rootDir) . '/storage/ebooks/' . $filename,
+        dirname($rootDir) . '/storage/app/public/ebooks/' . $filename,
+        $rootDir . '/storage/ebooks/' . $filename,
+        !empty($found['pdf_path']) ? ($storageDir . '/' . $found['pdf_path']) : null,
+        !empty($found['pdf_path']) ? (dirname($rootDir) . '/storage/' . $found['pdf_path']) : null,
+    ];
+
+    $targetFile = null;
+    foreach ($candidatePaths as $p) {
+        if (!empty($p) && file_exists($p) && is_file($p)) {
+            $targetFile = $p;
+            break;
+        }
+    }
+
+    if ($targetFile) {
+        streamFile($targetFile, 'application/pdf');
+    } else {
+        http_response_code(404);
+        header('Content-Type: text/plain');
+        header('Access-Control-Allow-Origin: *');
+        echo "File Not Found: " . htmlspecialchars($filename);
+        exit;
+    }
 }
 
 // 4. GET /api/ebooks/{id}
@@ -387,6 +412,10 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
 
     $savedFilename = $slug . '.pdf';
     $targetPath = $ebooksDir . '/' . $savedFilename;
+    $altPath1 = $rootDir . '/storage/app/public/ebooks/' . $savedFilename;
+    $altPath2 = dirname($rootDir) . '/storage/ebooks/' . $savedFilename;
+    $altPath3 = $rootDir . '/storage/ebooks/' . $savedFilename;
+
     $pdfSize = null;
     $origName = 'document.pdf';
 
@@ -394,6 +423,15 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
         move_uploaded_file($_FILES['pdf']['tmp_name'], $targetPath);
         $pdfSize = filesize($targetPath);
         $origName = $_FILES['pdf']['name'] ?? 'document.pdf';
+
+        // Copy to other storage locations for zero-failure streaming
+        foreach ([$altPath1, $altPath2, $altPath3] as $alt) {
+            $dir = dirname($alt);
+            if (!is_dir($dir)) @mkdir($dir, 0777, true);
+            if ($alt !== $targetPath && file_exists($targetPath)) {
+                @copy($targetPath, $alt);
+            }
+        }
     }
 
     if ($pdo) {
