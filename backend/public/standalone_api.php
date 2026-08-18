@@ -8,7 +8,8 @@ ini_set('post_max_size', '512M');
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With, Access-Control-Request-Private-Network');
+header('Access-Control-Allow-Private-Network: true');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
