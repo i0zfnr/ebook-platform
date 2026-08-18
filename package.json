@@ -2,7 +2,7 @@
   "name": "ebook-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "FlipBook Interactive E-Book Platform Monorepo by Hafizul Irfan",
+  "description": "FlipBook Interactive E-Book Platform Monorepo • Politeknik Besut",
   "main": "server.js",
   "workspaces": [
     "frontend"

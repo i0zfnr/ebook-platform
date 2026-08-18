@@ -38,7 +38,7 @@ export const Navbar: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-[#94a3b8] font-medium hidden sm:block">
-              Hafizul Irfan • Politeknik Besut
+              Politeknik Besut • Digital E-Book Platform
             </p>
           </div>
         </Link>

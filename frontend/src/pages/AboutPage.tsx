@@ -1,20 +1,14 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  BookOpen,
-  Terminal,
   Smartphone,
   Bot,
   Gamepad2,
   GraduationCap,
   Cpu,
-  Layers,
-  ExternalLink,
 } from 'lucide-react';
-import { BrandLogo } from '../components/common/BrandLogo';
 
 export const AboutPage: React.FC = () => {
   return (
@@ -36,7 +30,7 @@ export const AboutPage: React.FC = () => {
           </h1>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 dark:text-[#94a3b8] leading-relaxed">
-            An innovative open-source educational platform engineered by <strong className="text-slate-900 dark:text-[#f8fafc]">Hafizul Irfan</strong>, student of Diploma in Information Technology (DIT) at Politeknik Besut, combining smooth 3D flipbook reading with real-time AI pedagogical tutoring.
+            An innovative educational platform developed for <strong className="text-slate-900 dark:text-[#f8fafc]">Politeknik Besut</strong>, combining realistic 3D flipbook reading with real-time AI pedagogical tutoring for mathematics, technology, and engineering subjects.
           </p>
         </div>
 
@@ -196,76 +190,96 @@ export const AboutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Tech Stack Matrix */}
-        <div className="space-y-6">
+        {/* Academic Project Team & Lecturers */}
+        <div className="space-y-8">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 liquid-pill text-[10px] py-0.5 px-2.5">
-              <Layers className="h-3 w-3 text-violet-600 dark:text-[#a78bfa]" />
-              Modern Architecture
+              <GraduationCap className="h-3.5 w-3.5 text-violet-600 dark:text-[#a78bfa]" />
+              Project Leadership
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-[#f8fafc]">
-              Built with Modern Engineering
+              Lecturer Project Team
             </h2>
-            <p className="text-xs text-slate-500 dark:text-[#94a3b8]">
-              High-performance technologies engineered for speed and reliability
+            <p className="text-xs text-slate-500 dark:text-[#94a3b8] max-w-md mx-auto">
+              Initiated and guided by the academic faculty of Politeknik Besut, Terengganu
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-            <div className="liquid-card p-4 text-center space-y-1.5">
-              <p className="text-xs font-extrabold text-slate-900 dark:text-white">React 18 + Vite</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Ultra-fast frontend with TypeScript</p>
-            </div>
-            <div className="liquid-card p-4 text-center space-y-1.5">
-              <p className="text-xs font-extrabold text-slate-900 dark:text-white">Laravel 11 REST API</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Robust backend with 512MB uploads</p>
-            </div>
-            <div className="liquid-card p-4 text-center space-y-1.5">
-              <p className="text-xs font-extrabold text-slate-900 dark:text-white">Gemini 3.6 Flash</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Generative academic research AI</p>
-            </div>
-            <div className="liquid-card p-4 text-center space-y-1.5">
-              <p className="text-xs font-extrabold text-slate-900 dark:text-white">Liquid Glassmorphism</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Apple-grade dark & light UI system</p>
-            </div>
-          </div>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Lecturer 1 */}
+            <div className="liquid-glass rounded-3xl p-6 shadow-xl space-y-4 text-center sm:text-left flex flex-col justify-between border border-violet-500/20">
+              <div className="space-y-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/30 mx-auto sm:mx-0">
+                  <GraduationCap className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-[#f8fafc] pt-2">
+                  Farah Hayati Binti Che Lah
+                </h3>
+                <p className="text-xs text-violet-600 dark:text-[#a78bfa] font-mono-code font-bold">
+                  Lecturer • Politeknik Besut
+                </p>
+                <p className="text-xs text-slate-500 dark:text-[#94a3b8] leading-relaxed">
+                  Academic lead in curriculum design and interactive learning implementation.
+                </p>
+              </div>
 
-        {/* Creator & Academic Bio Card */}
-        <div className="liquid-glass rounded-3xl p-8 sm:p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border border-white/20">
-          <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-            <BrandLogo size="lg" />
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-[#f8fafc]">
-                Hafizul Irfan
-              </h3>
-              <p className="text-xs text-violet-600 dark:text-[#a78bfa] font-mono-code font-bold">
-                Student DIT • Politeknik Besut, Terengganu
-              </p>
-              <p className="text-xs text-slate-500 dark:text-[#94a3b8] max-w-md pt-1 leading-relaxed">
-                Passionate about engineering state-of-the-art web applications, intuitive UI/UX design systems, and generative AI tools that empower higher-education learning.
-              </p>
+              <a
+                href="mailto:farah@polibesut.edu.my"
+                className="liquid-btn-secondary flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold"
+              >
+                <span>farah@polibesut.edu.my</span>
+              </a>
             </div>
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
-            <a
-              href="https://github.com/i0zfnr/ebook-platform"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="liquid-btn-primary flex items-center gap-2 px-5 py-2.5 text-xs font-bold shadow-lg shadow-violet-600/30"
-            >
-              <Terminal className="h-4 w-4" />
-              <span>GitHub Repo</span>
-              <ExternalLink className="h-3 w-3 opacity-70" />
-            </a>
-            <Link
-              to="/library"
-              className="liquid-btn-secondary flex items-center gap-2 px-5 py-2.5 text-xs font-bold"
-            >
-              <BookOpen className="h-4 w-4" />
-              <span>Explore Library</span>
-            </Link>
+            {/* Lecturer 2 */}
+            <div className="liquid-glass rounded-3xl p-6 shadow-xl space-y-4 text-center sm:text-left flex flex-col justify-between border border-purple-500/20">
+              <div className="space-y-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-600/30 mx-auto sm:mx-0">
+                  <GraduationCap className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-[#f8fafc] pt-2">
+                  Wan Izyani Binti Wan Jusoh
+                </h3>
+                <p className="text-xs text-purple-600 dark:text-[#c084fc] font-mono-code font-bold">
+                  Lecturer • Politeknik Besut
+                </p>
+                <p className="text-xs text-slate-500 dark:text-[#94a3b8] leading-relaxed">
+                  Course coordinator in mathematical sciences and interactive module publishing.
+                </p>
+              </div>
+
+              <a
+                href="mailto:izyani@polibesut.edu.my"
+                className="liquid-btn-secondary flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold"
+              >
+                <span>izyani@polibesut.edu.my</span>
+              </a>
+            </div>
+
+            {/* Lecturer 3 */}
+            <div className="liquid-glass rounded-3xl p-6 shadow-xl space-y-4 text-center sm:text-left flex flex-col justify-between border border-indigo-500/20">
+              <div className="space-y-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-600/30 mx-auto sm:mx-0">
+                  <GraduationCap className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-[#f8fafc] pt-2">
+                  Wee Siew Ping
+                </h3>
+                <p className="text-xs text-indigo-600 dark:text-[#818cf8] font-mono-code font-bold">
+                  Lecturer • Politeknik Besut
+                </p>
+                <p className="text-xs text-slate-500 dark:text-[#94a3b8] leading-relaxed">
+                  Faculty advisor in pedagogical technology and digital textbook distribution.
+                </p>
+              </div>
+
+              <a
+                href="mailto:wee@polibesut.edu.my"
+                className="liquid-btn-secondary flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold"
+              >
+                <span>wee@polibesut.edu.my</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

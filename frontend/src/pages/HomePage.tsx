@@ -59,7 +59,7 @@ export const HomePage: React.FC = () => {
           {/* VisionOS Style Liquid Pill */}
           <div className="inline-flex items-center gap-2 liquid-pill mb-6">
             <span className="h-2 w-2 rounded-full bg-violet-600 dark:bg-[#a78bfa] animate-ping inline-block" />
-            <span>Product by Hafizul Irfan • DIT Politeknik Besut</span>
+            <span>Academic Platform • Politeknik Besut</span>
           </div>
 
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-[#f8fafc] sm:text-6xl lg:text-7xl">
@@ -145,7 +145,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Author Callout Banner with VisionOS Bevel */}
+      {/* Academic Project Team Callout Banner */}
       <section className="pb-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="liquid-glass rounded-3xl p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
@@ -153,23 +153,21 @@ export const HomePage: React.FC = () => {
               <BrandLogo size="md" />
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-[#f8fafc]">
-                  Developed by Hafizul Irfan
+                  Politeknik Besut E-Book Platform Project
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-[#94a3b8] mt-0.5">
-                  Student DIT, Politeknik Besut • Full-Stack Web & Software Development
+                  Pn. Farah Hayati • Pn. Wan Izyani • Pn. Wee Siew Ping • Politeknik Besut
                 </p>
               </div>
             </div>
 
-            <a
-              href="https://github.com/i0zfnr/my-portfolio.git"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/about"
               className="liquid-btn-primary flex items-center gap-2 px-5 py-2.5 text-xs font-bold"
             >
               <GraduationCap className="h-4 w-4" />
-              Visit Portfolio Repository
-            </a>
+              About Project & Team
+            </Link>
           </div>
         </div>
       </section>

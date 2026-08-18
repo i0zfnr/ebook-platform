@@ -1,7 +1,8 @@
 # E-Book Platform Monorepo 📚✨
 
-> **Developed by Hafizul Irfan • Student DIT, Politeknik Besut**  
-> GitHub Portfolio: [https://github.com/i0zfnr/my-portfolio.git](https://github.com/i0zfnr/my-portfolio.git)
+> **Politeknik Besut Academic E-Book Platform**  
+> **Lecturer Project Team**: Farah Hayati Binti Che Lah (`farah@polibesut.edu.my`) • Wan Izyani Binti Wan Jusoh (`izyani@polibesut.edu.my`) • Wee Siew Ping (`wee@polibesut.edu.my`)  
+> **Institution**: Politeknik Besut, Terengganu  
 
 ---
 
