@@ -420,7 +420,10 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
     $origName = 'document.pdf';
 
     if (!empty($_FILES['pdf']['tmp_name']) && is_uploaded_file($_FILES['pdf']['tmp_name'])) {
-        move_uploaded_file($_FILES['pdf']['tmp_name'], $targetPath);
+        $moveResult = move_uploaded_file($_FILES['pdf']['tmp_name'], $targetPath);
+        if (!$moveResult) {
+            sendJson(['success' => false, 'message' => 'Failed to save PDF file to disk. Check server storage permissions. Target: ' . $targetPath], 500);
+        }
         $pdfSize = filesize($targetPath);
         $origName = $_FILES['pdf']['name'] ?? 'document.pdf';
 
@@ -432,7 +435,14 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
                 @copy($targetPath, $alt);
             }
         }
+    } else {
+        // No PDF was received
+        $uploadError = $_FILES['pdf']['error'] ?? 'no file';
+        sendJson(['success' => false, 'message' => 'No PDF file received by server. Upload error code: ' . $uploadError . '. Check upload_max_filesize and post_max_size PHP settings.'], 400);
     }
+
+    $insertedId = null;
+    $dbError = null;
 
     if ($pdo) {
         try {
@@ -456,10 +466,20 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
                 ':interactive_elements' => is_string($interactive) ? $interactive : ($interactive ? json_encode($interactive) : null),
             ]);
 
-            $insertedId = intval($pdo->lastInsertId()) ?: time();
+            $insertedId = intval($pdo->lastInsertId());
         } catch (\Throwable $e) {
-            error_log("Insert into MySQL error: " . $e->getMessage());
+            $dbError = $e->getMessage();
+            error_log("Insert into MySQL error: " . $dbError);
         }
+    } else {
+        $dbError = 'No database connection available (PDO returned null). Check DB credentials in .env';
+    }
+
+    // If DB insert failed, return 500 error — do NOT silently succeed
+    if (!$insertedId) {
+        // Clean up the uploaded file since DB failed
+        if (file_exists($targetPath)) @unlink($targetPath);
+        sendJson(['success' => false, 'message' => 'Database insert failed: ' . ($dbError ?? 'Unknown error. Check server logs.')], 500);
     }
 
     $newBook = [
