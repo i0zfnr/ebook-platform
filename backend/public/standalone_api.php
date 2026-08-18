@@ -1,5 +1,10 @@
 <?php
-// Standalone Zero-Dependency PHP Engine for Cloud Hosting (Ryaze / 1Panel)
+// Standalone MySQL & SQLite PDO Engine for Cloud Hosting (Ryaze / 1Panel)
+
+ini_set('memory_limit', '512M');
+ini_set('max_execution_time', '300');
+ini_set('upload_max_filesize', '512M');
+ini_set('post_max_size', '512M');
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -50,24 +55,50 @@ foreach ($envPaths as $envFile) {
 }
 
 // Fallback to getenv() and $_ENV
-foreach (['GEMINI_API_KEY', 'VITE_GEMINI_API_KEY', 'DB_CONNECTION', 'DB_HOST', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'] as $key) {
+foreach (['GEMINI_API_KEY', 'VITE_GEMINI_API_KEY', 'DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'] as $key) {
     if (empty($env[$key])) {
         $val = getenv($key) ?: ($_ENV[$key] ?? ($_SERVER[$key] ?? ''));
         if ($val) $env[$key] = $val;
     }
 }
 
-function getDatabase($dbFile) {
-    if (file_exists($dbFile)) {
-        $content = @file_get_contents($dbFile);
-        $data = json_decode($content, true);
-        if (is_array($data)) return $data;
-    }
-    return [];
-}
+function getPdo($env, $rootDir) {
+    static $pdo = null;
+    if ($pdo !== null) return $pdo;
 
-function saveDatabase($dbFile, $data) {
-    @file_put_contents($dbFile, json_encode($data, JSON_PRETTY_PRINT));
+    // 1. Try MySQL if configured
+    $host = $env['DB_HOST'] ?? '127.0.0.1';
+    if ($host === 'localhost') $host = '127.0.0.1';
+    $port = $env['DB_PORT'] ?? 3306;
+    $db = $env['DB_DATABASE'] ?? '';
+    $user = $env['DB_USERNAME'] ?? '';
+    $pass = $env['DB_PASSWORD'] ?? '';
+
+    if (!empty($db) && !empty($user)) {
+        try {
+            $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+            $pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_TIMEOUT => 4,
+            ]);
+            return $pdo;
+        } catch (\Throwable $e) {
+            error_log("MySQL connection error: " . $e->getMessage());
+        }
+    }
+
+    // 2. Fallback to SQLite
+    try {
+        $sqlitePath = $rootDir . '/database/database.sqlite';
+        $pdo = new PDO("sqlite:$sqlitePath", null, null, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        return $pdo;
+    } catch (\Throwable $e) {
+        return null;
+    }
 }
 
 function sendJson($data, $code = 200) {
@@ -122,41 +153,94 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // 1. Health
 if ($uri === '/api/health') {
+    $pdo = getPdo($env, $rootDir);
+    $dbType = 'none';
+    $booksCount = 0;
+
+    if ($pdo) {
+        try {
+            $dbType = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            $countStmt = $pdo->query("SELECT COUNT(*) FROM ebooks");
+            $booksCount = intval($countStmt->fetchColumn());
+        } catch (\Throwable $e) {
+            $dbType = 'error: ' . $e->getMessage();
+        }
+    }
+
     sendJson([
         'status' => 'online',
-        'engine' => 'PHP Standalone Engine',
+        'engine' => 'PHP Standalone PDO Engine',
         'php_version' => PHP_VERSION,
+        'database_driver' => $dbType,
         'has_gemini_key' => !empty($env['GEMINI_API_KEY']),
-        'books_count' => count(getDatabase($dbFile)),
+        'books_count' => $booksCount,
         'storage_writable' => is_writable($storageDir),
     ]);
 }
 
-// 2. GET /api/ebooks
+// 2. GET /api/ebooks (Fetch from MySQL database)
 if ($uri === '/api/ebooks' && $method === 'GET') {
-    $db = getDatabase($dbFile);
-    $search = $_GET['search'] ?? '';
-    if (!empty($search)) {
-        $q = strtolower(trim($search));
-        $db = array_values(array_filter($db, function($b) use ($q) {
-            return str_contains(strtolower($b['title'] ?? ''), $q) || str_contains(strtolower($b['author'] ?? ''), $q);
-        }));
+    $pdo = getPdo($env, $rootDir);
+    $books = [];
+
+    if ($pdo) {
+        try {
+            $search = trim($_GET['search'] ?? '');
+            if (!empty($search)) {
+                $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE title LIKE :q1 OR author LIKE :q2 ORDER BY id DESC");
+                $stmt->execute([':q1' => "%$search%", ':q2' => "%$search%"]);
+            } else {
+                $stmt = $pdo->query("SELECT * FROM ebooks ORDER BY id DESC");
+            }
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $r) {
+                $interactive = null;
+                if (!empty($r['interactive_elements'])) {
+                    $interactive = is_string($r['interactive_elements']) ? json_decode($r['interactive_elements'], true) : $r['interactive_elements'];
+                }
+                $slug = $r['slug'] ?: strval($r['id']);
+                $books[] = [
+                    'id' => intval($r['id']),
+                    'title' => $r['title'],
+                    'slug' => $slug,
+                    'author' => $r['author'],
+                    'description' => $r['description'],
+                    'pdf_path' => $r['pdf_path'],
+                    'pdf_url' => '/api/ebooks/' . $slug . '/file',
+                    'cover_path' => $r['cover_path'] ?? null,
+                    'cover_url' => !empty($r['cover_path']) ? ('/storage/' . $r['cover_path']) : null,
+                    'original_filename' => $r['original_filename'],
+                    'file_size' => !empty($r['file_size']) ? intval($r['file_size']) : null,
+                    'total_pages' => !empty($r['total_pages']) ? intval($r['total_pages']) : null,
+                    'status' => $r['status'] ?? 'published',
+                    'interactive_elements' => $interactive,
+                    'created_at' => $r['created_at'],
+                    'updated_at' => $r['updated_at'],
+                ];
+            }
+        } catch (\Throwable $e) {
+            error_log("Select ebooks error: " . $e->getMessage());
+        }
     }
-    sendJson(['success' => true, 'data' => $db]);
+
+    sendJson(['success' => true, 'data' => $books]);
 }
 
 // 3. GET /api/ebooks/{id}/file
 if (preg_match('#^/api/ebooks/([^/]+)/file$#', $uri, $m) && $method === 'GET') {
     $idOrSlug = $m[1];
-    $db = getDatabase($dbFile);
+    $pdo = getPdo($env, $rootDir);
     $found = null;
-    foreach ($db as $b) {
-        if (strval($b['id']) === $idOrSlug || ($b['slug'] ?? '') === $idOrSlug) {
-            $found = $b;
-            break;
-        }
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE id = :id OR slug = :slug LIMIT 1");
+            $stmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+            $found = $stmt->fetch();
+        } catch (\Throwable $e) {}
     }
-    $filename = $found ? basename($found['pdf_path']) : "$idOrSlug.pdf";
+
+    $filename = $found && !empty($found['pdf_path']) ? basename($found['pdf_path']) : "$idOrSlug.pdf";
     $targetFile = $ebooksDir . '/' . $filename;
     streamFile($targetFile, 'application/pdf');
 }
@@ -164,41 +248,77 @@ if (preg_match('#^/api/ebooks/([^/]+)/file$#', $uri, $m) && $method === 'GET') {
 // 4. GET /api/ebooks/{id}
 if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'GET') {
     $idOrSlug = $m[1];
-    $db = getDatabase($dbFile);
-    foreach ($db as $b) {
-        if (strval($b['id']) === $idOrSlug || ($b['slug'] ?? '') === $idOrSlug) {
-            sendJson(['success' => true, 'data' => $b]);
-        }
+    $pdo = getPdo($env, $rootDir);
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE id = :id OR slug = :slug LIMIT 1");
+            $stmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+            $r = $stmt->fetch();
+            if ($r) {
+                $interactive = null;
+                if (!empty($r['interactive_elements'])) {
+                    $interactive = is_string($r['interactive_elements']) ? json_decode($r['interactive_elements'], true) : $r['interactive_elements'];
+                }
+                $slug = $r['slug'] ?: strval($r['id']);
+                sendJson([
+                    'success' => true,
+                    'data' => [
+                        'id' => intval($r['id']),
+                        'title' => $r['title'],
+                        'slug' => $slug,
+                        'author' => $r['author'],
+                        'description' => $r['description'],
+                        'pdf_path' => $r['pdf_path'],
+                        'pdf_url' => '/api/ebooks/' . $slug . '/file',
+                        'cover_path' => $r['cover_path'] ?? null,
+                        'cover_url' => !empty($r['cover_path']) ? ('/storage/' . $r['cover_path']) : null,
+                        'original_filename' => $r['original_filename'],
+                        'file_size' => !empty($r['file_size']) ? intval($r['file_size']) : null,
+                        'total_pages' => !empty($r['total_pages']) ? intval($r['total_pages']) : null,
+                        'status' => $r['status'] ?? 'published',
+                        'interactive_elements' => $interactive,
+                        'created_at' => $r['created_at'],
+                        'updated_at' => $r['updated_at'],
+                    ]
+                ]);
+            }
+        } catch (\Throwable $e) {}
     }
+
     sendJson(['success' => false, 'message' => 'E-Book not found'], 404);
 }
 
 // 5. DELETE /api/ebooks/{id}
 if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'DELETE') {
     $idOrSlug = $m[1];
-    $db = getDatabase($dbFile);
-    $newDb = [];
-    foreach ($db as $b) {
-        if (strval($b['id']) === $idOrSlug || ($b['slug'] ?? '') === $idOrSlug) {
-            if (!empty($b['pdf_path'])) {
-                $targetFile = $storageDir . '/' . $b['pdf_path'];
+    $pdo = getPdo($env, $rootDir);
+
+    if ($pdo) {
+        try {
+            $stmt = $pdo->prepare("SELECT pdf_path FROM ebooks WHERE id = :id OR slug = :slug LIMIT 1");
+            $stmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+            $row = $stmt->fetch();
+            if ($row && !empty($row['pdf_path'])) {
+                $targetFile = $storageDir . '/' . $row['pdf_path'];
                 if (file_exists($targetFile)) @unlink($targetFile);
             }
-        } else {
-            $newDb[] = $b;
-        }
+
+            $delStmt = $pdo->prepare("DELETE FROM ebooks WHERE id = :id OR slug = :slug");
+            $delStmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+        } catch (\Throwable $e) {}
     }
-    saveDatabase($dbFile, $newDb);
+
     sendJson(['success' => true, 'message' => 'Deleted successfully']);
 }
 
-// 6. POST /api/ebooks (Multipart Upload)
+// 6. POST /api/ebooks (Insert directly into MySQL database)
 if ($uri === '/api/ebooks' && $method === 'POST') {
     $title = trim($_POST['title'] ?? 'Untitled E-Book');
     $author = trim($_POST['author'] ?? 'Lecturer');
     $description = trim($_POST['description'] ?? '');
     $totalPages = !empty($_POST['total_pages']) ? intval($_POST['total_pages']) : null;
-    $interactive = !empty($_POST['interactive_elements']) ? json_decode($_POST['interactive_elements'], true) : null;
+    $interactive = !empty($_POST['interactive_elements']) ? $_POST['interactive_elements'] : null;
 
     $slug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($title));
     $slug = trim($slug, '-') ?: ('ebook-' . time());
@@ -211,31 +331,58 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
     if (!empty($_FILES['pdf']['tmp_name']) && is_uploaded_file($_FILES['pdf']['tmp_name'])) {
         move_uploaded_file($_FILES['pdf']['tmp_name'], $targetPath);
         $pdfSize = filesize($targetPath);
-        $origName = $_FILES['pdf']['name'];
+        $origName = $_FILES['pdf']['name'] ?? 'document.pdf';
+    }
+
+    $insertedId = time();
+    $pdo = getPdo($env, $rootDir);
+
+    if ($pdo) {
+        try {
+            $isMysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+            $nowFunc = $isMysql ? 'NOW()' : "datetime('now')";
+
+            $sql = "INSERT INTO ebooks (title, slug, author, description, pdf_path, original_filename, file_size, total_pages, status, interactive_elements, created_at, updated_at) 
+                    VALUES (:title, :slug, :author, :description, :pdf_path, :original_filename, :file_size, :total_pages, :status, :interactive_elements, $nowFunc, $nowFunc)";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':title' => $title,
+                ':slug' => $slug,
+                ':author' => $author,
+                ':description' => $description,
+                ':pdf_path' => 'ebooks/' . $savedFilename,
+                ':original_filename' => $origName,
+                ':file_size' => $pdfSize,
+                ':total_pages' => $totalPages,
+                ':status' => 'published',
+                ':interactive_elements' => is_string($interactive) ? $interactive : ($interactive ? json_encode($interactive) : null),
+            ]);
+
+            $insertedId = intval($pdo->lastInsertId()) ?: time();
+        } catch (\Throwable $e) {
+            error_log("Insert into MySQL error: " . $e->getMessage());
+        }
     }
 
     $newBook = [
-        'id' => time(),
+        'id' => $insertedId,
         'title' => $title,
         'slug' => $slug,
         'author' => $author,
         'description' => $description,
         'pdf_path' => 'ebooks/' . $savedFilename,
-        'pdf_url' => '/storage/ebooks/' . $savedFilename,
+        'pdf_url' => '/api/ebooks/' . $slug . '/file',
         'cover_path' => null,
         'cover_url' => null,
         'original_filename' => $origName,
         'file_size' => $pdfSize,
         'total_pages' => $totalPages,
         'status' => 'published',
-        'interactive_elements' => $interactive,
+        'interactive_elements' => is_string($interactive) ? json_decode($interactive, true) : $interactive,
         'created_at' => date('c'),
         'updated_at' => date('c'),
     ];
-
-    $db = getDatabase($dbFile);
-    array_unshift($db, $newBook);
-    saveDatabase($dbFile, $db);
 
     sendJson(['success' => true, 'data' => $newBook], 201);
 }
