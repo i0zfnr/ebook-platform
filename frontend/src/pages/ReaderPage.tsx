@@ -112,17 +112,19 @@ export const ReaderPage: React.FC = () => {
           }).catch(() => {});
 
           setLoading(false);
-        } catch {
+        } catch (err: any) {
           if (isCancelled) return;
+          console.error('ReaderPage PDF loading error:', err);
           setError(
-            'Failed to parse PDF document. The file might be corrupted or cross-origin blocked.'
+            err?.message || 'Failed to parse PDF document. The file might be corrupted or cross-origin blocked.'
           );
           setLoading(false);
         }
       })
       .catch((err: any) => {
         if (isCancelled) return;
-        setError(err.response?.data?.message || 'E-Book not found');
+        console.error('ReaderPage ebook metadata error:', err);
+        setError(err.response?.data?.message || err?.message || 'E-Book not found');
         setLoading(false);
       });
 
