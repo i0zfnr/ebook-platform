@@ -76,16 +76,47 @@ const thumbnailCache = new Map<string, string>();
 const pageTextCache = new Map<string, string[]>();
 
 /**
+ * Store uploaded PDF file/buffer in memory cache so ReaderPage can open it immediately
+ */
+export function cacheUploadedPdf(key: string | number, source: File | ArrayBuffer | pdfjsLib.PDFDocumentProxy): void {
+  if (!key) return;
+  const strKey = String(key);
+
+  if ('numPages' in source) {
+    pdfDocCache.set(strKey, Promise.resolve(source));
+    return;
+  }
+
+  const loadPromise = (async () => {
+    const arrayBuffer = source instanceof File ? await source.arrayBuffer() : source;
+    const typedArray = new Uint8Array(arrayBuffer);
+    const loadingTask = pdfjsLib.getDocument({
+      data: typedArray,
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+      cMapPacked: true,
+    });
+    return await loadingTask.promise;
+  })();
+
+  pdfDocCache.set(strKey, loadPromise);
+}
+
+/**
  * Load PDF document from URL (cached promise for zero duplicate network requests)
  */
-export function loadPdfDocument(url: string): Promise<pdfjsLib.PDFDocumentProxy> {
+export function loadPdfDocument(url: string, bookIdentifier?: string | number): Promise<pdfjsLib.PDFDocumentProxy> {
   const finalUrl = normalizePdfUrl(url);
+
+  if (bookIdentifier && pdfDocCache.has(String(bookIdentifier))) {
+    return pdfDocCache.get(String(bookIdentifier))!;
+  }
 
   if (pdfDocCache.has(finalUrl)) {
     return pdfDocCache.get(finalUrl)!;
   }
 
   const loadPromise = (async () => {
+    // Attempt 1: Fetch through normalized URL
     try {
       const response = await fetch(finalUrl);
       if (!response.ok) {
@@ -101,7 +132,12 @@ export function loadPdfDocument(url: string): Promise<pdfjsLib.PDFDocumentProxy>
       });
 
       return await loadingTask.promise;
-    } catch {
+    } catch (err) {
+      console.warn('Fetch with typedArray failed, attempting direct PDFJS getDocument...', err);
+    }
+
+    // Attempt 2: Direct PDFJS load
+    try {
       const loadingTask = pdfjsLib.getDocument({
         url: finalUrl,
         cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
@@ -109,10 +145,35 @@ export function loadPdfDocument(url: string): Promise<pdfjsLib.PDFDocumentProxy>
       });
 
       return await loadingTask.promise;
+    } catch {
+      // Attempt 3: If url was /api/ebooks/{slug}/file, try relative /storage/ fallback
+      if (finalUrl.includes('/api/ebooks/')) {
+        const slug = finalUrl.split('/api/ebooks/')[1]?.split('/')[0];
+        if (slug) {
+          try {
+            const fallbackUrl = `/storage/ebooks/${slug}.pdf`;
+            const response = await fetch(fallbackUrl);
+            if (response.ok) {
+              const arrayBuffer = await response.arrayBuffer();
+              const typedArray = new Uint8Array(arrayBuffer);
+              const loadingTask = pdfjsLib.getDocument({
+                data: typedArray,
+                cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+                cMapPacked: true,
+              });
+              return await loadingTask.promise;
+            }
+          } catch {}
+        }
+      }
+      throw new Error(`Failed to load PDF document from ${finalUrl}`);
     }
   })();
 
   pdfDocCache.set(finalUrl, loadPromise);
+  if (bookIdentifier) {
+    pdfDocCache.set(String(bookIdentifier), loadPromise);
+  }
   return loadPromise;
 }
 

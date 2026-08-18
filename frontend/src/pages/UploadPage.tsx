@@ -18,7 +18,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { ebookService, formatBytes } from '../services/ebookService';
-import { loadPdfDocument } from '../services/pdfService';
+import { loadPdfDocument, cacheUploadedPdf } from '../services/pdfService';
 import { generateAiLive, saveInteractiveElements } from '../services/aiGeneratorService';
 import type { InteractiveElement } from '../types/interactive';
 
@@ -175,6 +175,12 @@ export const UploadPage: React.FC = () => {
       const result = await ebookService.uploadEbook(formData, (progress) => {
         setUploadProgress(progress);
       });
+
+      // Cache PDF in memory for instant 0ms reader opening
+      if (pdfFile) {
+        if (result.slug) cacheUploadedPdf(result.slug, pdfFile);
+        if (result.id) cacheUploadedPdf(result.id, pdfFile);
+      }
 
       // Save to client localStorage cache for instant fast loading
       if (generatedElements.length > 0) {

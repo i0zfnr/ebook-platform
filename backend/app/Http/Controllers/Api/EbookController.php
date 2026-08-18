@@ -226,17 +226,18 @@ class EbookController extends Controller
     /**
      * Stream the PDF file with explicit CORS and content-type headers.
      */
-    public function file(string $idOrSlug)
+    public function file(string $ebook)
     {
-        $ebook = is_numeric($idOrSlug)
+        $idOrSlug = $ebook;
+        $ebookModel = is_numeric($idOrSlug)
             ? Ebook::find($idOrSlug)
             : Ebook::where('slug', $idOrSlug)->first();
 
-        if (!$ebook || !$ebook->pdf_path || !Storage::disk('public')->exists($ebook->pdf_path)) {
+        if (!$ebookModel || !$ebookModel->pdf_path || !Storage::disk('public')->exists($ebookModel->pdf_path)) {
             return response()->json(['message' => 'PDF document not found.'], 404);
         }
 
-        return Storage::disk('public')->response($ebook->pdf_path, $ebook->original_filename ?? 'ebook.pdf', [
+        return Storage::disk('public')->response($ebookModel->pdf_path, $ebookModel->original_filename ?? 'ebook.pdf', [
             'Content-Type' => 'application/pdf',
             'Access-Control-Allow-Origin' => '*',
             'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
@@ -248,17 +249,18 @@ class EbookController extends Controller
     /**
      * Stream the Cover image file with explicit CORS headers.
      */
-    public function cover(string $idOrSlug)
+    public function cover(string $ebook)
     {
-        $ebook = is_numeric($idOrSlug)
+        $idOrSlug = $ebook;
+        $ebookModel = is_numeric($idOrSlug)
             ? Ebook::find($idOrSlug)
             : Ebook::where('slug', $idOrSlug)->first();
 
-        if (!$ebook || !$ebook->cover_path || !Storage::disk('public')->exists($ebook->cover_path)) {
+        if (!$ebookModel || !$ebookModel->cover_path || !Storage::disk('public')->exists($ebookModel->cover_path)) {
             return response()->json(['message' => 'Cover image not found.'], 404);
         }
 
-        return Storage::disk('public')->response($ebook->cover_path, null, [
+        return Storage::disk('public')->response($ebookModel->cover_path, 'cover.jpg', [
             'Access-Control-Allow-Origin' => '*',
             'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
             'Access-Control-Allow-Headers' => '*',

@@ -73,7 +73,7 @@ export const ReaderPage: React.FC = () => {
         setLoadingProgressText('Loading PDF document...');
 
         try {
-          const doc = await loadPdfDocument(book.pdf_url);
+          const doc = await loadPdfDocument(book.pdf_url, book.slug || book.id);
           if (isCancelled) return;
           setPdfDoc(doc);
           setTotalPages(doc.numPages);
