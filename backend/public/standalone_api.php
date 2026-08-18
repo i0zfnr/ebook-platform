@@ -68,9 +68,9 @@ function getPdo($env, $rootDir) {
 
     // 1. Try MySQL with multi-host candidate resolution
     $port = $env['DB_PORT'] ?? 3306;
-    $db = $env['DB_DATABASE'] ?? 'ryz_51_ebook_platform';
-    $user = $env['DB_USERNAME'] ?? 'ryz_51_i0zfnr';
-    $pass = $env['DB_PASSWORD'] ?? 'ryz_5';
+    $db   = $env['DB_DATABASE'] ?? '';
+    $user = $env['DB_USERNAME'] ?? '';
+    $pass = $env['DB_PASSWORD'] ?? '';
 
     $candidateHosts = array_unique(array_filter([
         $env['DB_HOST'] ?? '',
