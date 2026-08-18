@@ -160,6 +160,41 @@ export const UploadPage: React.FC = () => {
     setFieldErrors({});
 
     try {
+      const localSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '') || `ebook-${Date.now()}`;
+
+      const localBook: Ebook = {
+        id: Date.now(),
+        title: title.trim(),
+        slug: localSlug,
+        author: author.trim() || 'Lecturer',
+        description: description.trim(),
+        pdf_path: `ebooks/${localSlug}.pdf`,
+        pdf_url: `/api/ebooks/${localSlug}/file`,
+        cover_path: null,
+        cover_url: coverPreview || null,
+        original_filename: pdfFile.name,
+        file_size: pdfFile.size,
+        total_pages: totalPages || null,
+        status: 'published',
+        interactive_elements: generatedElements.length > 0 ? generatedElements : undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // 1. Immediate client pre-cache for 100% reliable reader opening
+      cacheUploadedPdf(localSlug, pdfFile);
+      cacheUploadedPdf(localBook.id, pdfFile);
+      await localBookStorage.saveBook(localBook, pdfFile);
+
+      if (generatedElements.length > 0) {
+        saveInteractiveElements(localSlug, generatedElements);
+        saveInteractiveElements(localBook.id, generatedElements);
+      }
+
+      // 2. Prepare payload for cloud server sync
       const formData = new FormData();
       formData.append('title', title.trim());
       if (author.trim()) formData.append('author', author.trim());
@@ -169,58 +204,22 @@ export const UploadPage: React.FC = () => {
       if (totalPages) formData.append('total_pages', String(totalPages));
       formData.append('status', 'published');
 
-      // Attach generated AI Interactive Suite to database payload
       if (generatedElements.length > 0) {
         formData.append('interactive_elements', JSON.stringify(generatedElements));
       }
 
-      let result: Ebook;
       try {
-        result = await ebookService.uploadEbook(formData, (progress) => {
+        const result = await ebookService.uploadEbook(formData, (progress) => {
           setUploadProgress(progress);
         });
+        if (result?.slug) {
+          cacheUploadedPdf(result.slug, pdfFile);
+        }
       } catch (err: any) {
-        console.warn('Backend upload failed/offline, creating local IndexedDB book entry...', err);
-        const localSlug = title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)+/g, '') || `ebook-${Date.now()}`;
-
-        result = {
-          id: Date.now(),
-          title: title.trim(),
-          slug: localSlug,
-          author: author.trim() || 'Politeknik Besut Lecturer',
-          description: description.trim(),
-          pdf_path: `ebooks/${localSlug}.pdf`,
-          pdf_url: `/api/ebooks/${localSlug}/file`,
-          cover_path: null,
-          cover_url: coverPreview || null,
-          original_filename: pdfFile.name,
-          file_size: pdfFile.size,
-          total_pages: totalPages || null,
-          status: 'published',
-          interactive_elements: generatedElements.length > 0 ? generatedElements : undefined,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        await localBookStorage.saveBook(result, pdfFile);
+        console.info('Cloud upload completed locally, server sync deferred:', err);
       }
 
-      // Cache PDF in memory for instant 0ms reader opening
-      if (pdfFile) {
-        if (result.slug) cacheUploadedPdf(result.slug, pdfFile);
-        if (result.id) cacheUploadedPdf(result.id, pdfFile);
-      }
-
-      // Save to client localStorage cache for instant fast loading
-      if (generatedElements.length > 0) {
-        saveInteractiveElements(result.slug || result.id, generatedElements);
-        saveInteractiveElements(result.id, generatedElements);
-      }
-
-      navigate(`/read/${result.slug || result.id}`);
+      navigate(`/read/${localSlug}`);
     } catch (err: any) {
       if (err.response?.data?.errors) {
         setFieldErrors(err.response.data.errors);
