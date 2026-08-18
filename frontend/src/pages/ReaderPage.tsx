@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import type * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
 import { ArrowLeft, AlertCircle, Loader2, Gamepad2, UploadCloud, Trash2 } from 'lucide-react';
 import type { Ebook } from '../types/ebook';
 import type { InteractiveElement } from '../types/interactive';
@@ -271,23 +271,64 @@ export const ReaderPage: React.FC = () => {
     setLoadingProgressText('Attaching and parsing PDF file...');
 
     try {
+      const arrayBuffer = await file.arrayBuffer();
+      const typedArray = new Uint8Array(arrayBuffer);
+
+      const loadingTask = pdfjsLib.getDocument({
+        data: typedArray,
+        cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+        cMapPacked: true,
+      });
+      const doc = await loadingTask.promise;
+
       if (id) {
-        cacheUploadedPdf(id, file);
+        cacheUploadedPdf(id, doc);
       }
       if (ebook?.slug) {
-        cacheUploadedPdf(ebook.slug, file);
+        cacheUploadedPdf(ebook.slug, doc);
       }
 
-      if (ebook) {
-        await localBookStorage.saveBook(ebook, file);
+      let currentBook = ebook;
+      if (currentBook) {
+        await localBookStorage.saveBook(currentBook, arrayBuffer);
+      } else if (id) {
+        currentBook = {
+          id: Date.now(),
+          title: id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+          slug: id,
+          author: 'Politeknik Besut',
+          description: 'Educational module.',
+          pdf_path: `ebooks/${id}.pdf`,
+          pdf_url: `/api/ebooks/${id}/file`,
+          cover_path: null,
+          cover_url: null,
+          original_filename: file.name,
+          file_size: file.size,
+          total_pages: doc.numPages,
+          status: 'published',
+          interactive_elements: undefined,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setEbook(currentBook);
+        await localBookStorage.saveBook(currentBook, arrayBuffer);
       }
 
-      const doc = await loadPdfDocument(ebook?.pdf_url || '', id);
       setPdfDoc(doc);
       setTotalPages(doc.numPages);
+      setCurrentPage(1);
+
+      // Extract outline asynchronously
+      extractPdfOutline(doc)
+        .then((extractedOutline) => {
+          setOutline(extractedOutline);
+        })
+        .catch(() => {});
+
       setLoading(false);
     } catch (err: any) {
-      setError(err?.message || 'Failed to load PDF file.');
+      console.error('Failed to parse attached PDF file:', err);
+      setError(err?.message || 'Failed to parse attached PDF file.');
       setLoading(false);
     }
   };
