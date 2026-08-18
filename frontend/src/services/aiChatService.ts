@@ -37,7 +37,7 @@ async function callDirectGemini(
   const apiKey = getGeminiApiKey();
 
   if (apiKey) {
-    const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+    const models = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
     
     let systemPrompt = `You are Aura AI, an expert academic research assistant and university tutor.
 Your sole purpose is to help students with scholarly research, deep conceptual understanding, mathematical derivations, step-by-step problem solving, and synthesis of the textbook topics they are reading.

@@ -19,7 +19,7 @@ class GeminiService
             return $this->getFallbackElements($title, $totalPages, $textSample);
         }
 
-        $model = env('GEMINI_MODEL') ?: 'gemini-3.6-flash';
+        $model = env('GEMINI_MODEL') ?: 'gemini-3.7-flash';
         $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
         $systemPrompt = <<<PROMPT

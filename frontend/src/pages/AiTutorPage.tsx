@@ -195,7 +195,7 @@ export const AiTutorPage: React.FC = () => {
                 Aura AI Study Tutor
               </h1>
               <span className="liquid-pill text-[10px] py-0.5 px-2.5 font-mono-code font-bold text-violet-600 dark:text-[#a78bfa]">
-                Gemini 3.6 Flash
+                Gemini 3.7 Flash
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -431,7 +431,7 @@ export const AiTutorPage: React.FC = () => {
 
         <p className="text-[10px] font-mono-code text-center text-slate-400 dark:text-slate-500 mt-2 flex items-center justify-center gap-1.5">
           <Sparkle className="h-3 w-3 text-violet-500 inline" />
-          <span>Powered by Google Gemini 3.6 Flash • Politeknik Besut Academic AI Companion</span>
+          <span>Powered by Google Gemini 3.7 Flash • Politeknik Besut Academic AI Companion</span>
         </p>
       </div>
     </div>

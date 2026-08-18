@@ -45,7 +45,7 @@ export const AboutPage: React.FC = () => {
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-                  The Google Gemini 3.6 Flash AI Engine
+                  The Google Gemini 3.7 Flash AI Engine
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Active document research & interactive learning automation

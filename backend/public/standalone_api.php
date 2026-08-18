@@ -662,7 +662,7 @@ Output MUST be a valid JSON object matching this schema exactly without markdown
   }
 }";
 
-        $models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+        $models = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
         foreach ($models as $model) {
             $geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . urlencode($apiKey);
             $ch = curl_init($geminiUrl);
