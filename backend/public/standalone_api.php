@@ -66,35 +66,82 @@ function getPdo($env, $rootDir) {
     static $pdo = null;
     if ($pdo !== null) return $pdo;
 
-    // 1. Try MySQL if configured
-    $host = $env['DB_HOST'] ?? '127.0.0.1';
-    if ($host === 'localhost') $host = '127.0.0.1';
+    // 1. Try MySQL with multi-host candidate resolution
     $port = $env['DB_PORT'] ?? 3306;
-    $db = $env['DB_DATABASE'] ?? '';
-    $user = $env['DB_USERNAME'] ?? '';
-    $pass = $env['DB_PASSWORD'] ?? '';
+    $db = $env['DB_DATABASE'] ?? 'ryz_51_ebook_platform';
+    $user = $env['DB_USERNAME'] ?? 'ryz_51_i0zfnr';
+    $pass = $env['DB_PASSWORD'] ?? 'ryz_5';
+
+    $candidateHosts = array_unique(array_filter([
+        $env['DB_HOST'] ?? '',
+        '127.0.0.1',
+        'localhost',
+        'mysql',
+        '172.17.0.1',
+        '1Panel-mysql-KZAi',
+    ]));
 
     if (!empty($db) && !empty($user)) {
-        try {
-            $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
-            $pdo = new PDO($dsn, $user, $pass, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_TIMEOUT => 4,
-            ]);
-            return $pdo;
-        } catch (\Throwable $e) {
-            error_log("MySQL connection error: " . $e->getMessage());
+        foreach ($candidateHosts as $host) {
+            try {
+                $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+                $testPdo = new PDO($dsn, $user, $pass, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_TIMEOUT => 2,
+                ]);
+                // Ensure ebooks table exists
+                $testPdo->exec("CREATE TABLE IF NOT EXISTS ebooks (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    slug VARCHAR(255) UNIQUE NOT NULL,
+                    author VARCHAR(255) NULL,
+                    description TEXT NULL,
+                    pdf_path VARCHAR(255) NOT NULL,
+                    cover_path VARCHAR(255) NULL,
+                    original_filename VARCHAR(255) NULL,
+                    file_size BIGINT UNSIGNED NULL,
+                    total_pages INT UNSIGNED NULL,
+                    status VARCHAR(50) DEFAULT 'published',
+                    interactive_elements JSON NULL,
+                    created_at TIMESTAMP NULL,
+                    updated_at TIMESTAMP NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+                $pdo = $testPdo;
+                return $pdo;
+            } catch (\Throwable $e) {
+                // Try next host
+            }
         }
     }
 
-    // 2. Fallback to SQLite
+    // 2. Fallback to SQLite with automatic table schema
     try {
-        $sqlitePath = $rootDir . '/database/database.sqlite';
-        $pdo = new PDO("sqlite:$sqlitePath", null, null, [
+        $dbDir = $rootDir . '/database';
+        if (!is_dir($dbDir)) @mkdir($dbDir, 0777, true);
+        $sqlitePath = $dbDir . '/database.sqlite';
+        $sqlitePdo = new PDO("sqlite:$sqlitePath", null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
+        $sqlitePdo->exec("CREATE TABLE IF NOT EXISTS ebooks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            author TEXT NULL,
+            description TEXT NULL,
+            pdf_path TEXT NOT NULL,
+            cover_path TEXT NULL,
+            original_filename TEXT NULL,
+            file_size INTEGER NULL,
+            total_pages INTEGER NULL,
+            status TEXT DEFAULT 'published',
+            interactive_elements TEXT NULL,
+            created_at TEXT NULL,
+            updated_at TEXT NULL
+        );");
+        $pdo = $sqlitePdo;
         return $pdo;
     } catch (\Throwable $e) {
         return null;
