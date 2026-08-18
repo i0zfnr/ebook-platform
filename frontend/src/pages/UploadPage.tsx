@@ -184,17 +184,7 @@ export const UploadPage: React.FC = () => {
         updated_at: new Date().toISOString(),
       };
 
-      // 1. Immediate client pre-cache for 100% reliable reader opening
-      cacheUploadedPdf(localSlug, pdfFile);
-      cacheUploadedPdf(localBook.id, pdfFile);
-      await localBookStorage.saveBook(localBook, pdfFile);
-
-      if (generatedElements.length > 0) {
-        saveInteractiveElements(localSlug, generatedElements);
-        saveInteractiveElements(localBook.id, generatedElements);
-      }
-
-      // 2. Prepare payload for cloud server sync
+      // 1. Prepare payload for cloud MySQL server sync
       const formData = new FormData();
       formData.append('title', title.trim());
       if (author.trim()) formData.append('author', author.trim());
@@ -208,24 +198,31 @@ export const UploadPage: React.FC = () => {
         formData.append('interactive_elements', JSON.stringify(generatedElements));
       }
 
-      try {
-        const result = await ebookService.uploadEbook(formData, (progress) => {
-          setUploadProgress(progress);
-        });
-        if (result?.slug) {
-          cacheUploadedPdf(result.slug, pdfFile);
-        }
-      } catch (err: any) {
-        console.info('Cloud upload completed locally, server sync deferred:', err);
+      // 2. Upload to Cloud Server and MySQL Database
+      const result = await ebookService.uploadEbook(formData, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      const finalSlug = result?.slug || localSlug;
+
+      // 3. Cache PDF locally for instant 0ms reader opening
+      cacheUploadedPdf(finalSlug, pdfFile);
+      if (result?.id) cacheUploadedPdf(result.id, pdfFile);
+      await localBookStorage.saveBook(result || localBook, pdfFile);
+
+      if (generatedElements.length > 0) {
+        saveInteractiveElements(finalSlug, generatedElements);
       }
 
-      navigate(`/read/${localSlug}`);
+      // 4. Navigate only after upload is 100% finished
+      navigate(`/read/${finalSlug}`);
     } catch (err: any) {
+      console.error('Upload error:', err);
       if (err.response?.data?.errors) {
         setFieldErrors(err.response.data.errors);
       }
       setErrorMessage(
-        err.response?.data?.message || 'Failed to process e-book. Please verify file format.'
+        err.response?.data?.message || 'Failed to upload e-book to database. Please check connection.'
       );
     } finally {
       setIsUploading(false);
