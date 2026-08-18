@@ -293,8 +293,13 @@ if (preg_match('#^/api/ebooks/([^/]+)/file$#', $uri, $m) && $method === 'GET') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE id = :id OR slug = :slug LIMIT 1");
-            $stmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+            if (is_numeric($idOrSlug)) {
+                $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => intval($idOrSlug)]);
+            } else {
+                $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE slug = :slug LIMIT 1");
+                $stmt->execute([':slug' => strval($idOrSlug)]);
+            }
             $found = $stmt->fetch();
         } catch (\Throwable $e) {}
     }
@@ -336,8 +341,13 @@ if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'GET') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE id = :id OR slug = :slug LIMIT 1");
-            $stmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+            if (is_numeric($idOrSlug)) {
+                $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => intval($idOrSlug)]);
+            } else {
+                $stmt = $pdo->prepare("SELECT * FROM ebooks WHERE slug = :slug LIMIT 1");
+                $stmt->execute([':slug' => strval($idOrSlug)]);
+            }
             $r = $stmt->fetch();
             if ($r) {
                 $interactive = null;
@@ -380,17 +390,31 @@ if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'DELETE') {
 
     if ($pdo) {
         try {
-            $stmt = $pdo->prepare("SELECT pdf_path FROM ebooks WHERE id = :id OR slug = :slug LIMIT 1");
-            $stmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
+            if (is_numeric($idOrSlug)) {
+                $stmt = $pdo->prepare("SELECT pdf_path FROM ebooks WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => intval($idOrSlug)]);
+            } else {
+                $stmt = $pdo->prepare("SELECT pdf_path FROM ebooks WHERE slug = :slug LIMIT 1");
+                $stmt->execute([':slug' => strval($idOrSlug)]);
+            }
             $row = $stmt->fetch();
             if ($row && !empty($row['pdf_path'])) {
                 $targetFile = $storageDir . '/' . $row['pdf_path'];
                 if (file_exists($targetFile)) @unlink($targetFile);
+                $alt1 = $rootDir . '/storage/app/public/' . $row['pdf_path'];
+                if (file_exists($alt1)) @unlink($alt1);
             }
 
-            $delStmt = $pdo->prepare("DELETE FROM ebooks WHERE id = :id OR slug = :slug");
-            $delStmt->execute([':id' => $idOrSlug, ':slug' => $idOrSlug]);
-        } catch (\Throwable $e) {}
+            if (is_numeric($idOrSlug)) {
+                $delStmt = $pdo->prepare("DELETE FROM ebooks WHERE id = :id");
+                $delStmt->execute([':id' => intval($idOrSlug)]);
+            } else {
+                $delStmt = $pdo->prepare("DELETE FROM ebooks WHERE slug = :slug");
+                $delStmt->execute([':slug' => strval($idOrSlug)]);
+            }
+        } catch (\Throwable $e) {
+            error_log("Delete error: " . $e->getMessage());
+        }
     }
 
     sendJson(['success' => true, 'message' => 'Deleted successfully']);
