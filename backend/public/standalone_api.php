@@ -367,8 +367,23 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
     $totalPages = !empty($_POST['total_pages']) ? intval($_POST['total_pages']) : null;
     $interactive = !empty($_POST['interactive_elements']) ? $_POST['interactive_elements'] : null;
 
-    $slug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($title));
-    $slug = trim($slug, '-') ?: ('ebook-' . time());
+    $baseSlug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($title));
+    $baseSlug = trim($baseSlug, '-') ?: ('ebook-' . time());
+    $slug = $baseSlug;
+
+    $insertedId = time();
+    $pdo = getPdo($env, $rootDir);
+
+    // Auto-resolve duplicate slug for MySQL unique constraint
+    if ($pdo) {
+        try {
+            $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM ebooks WHERE slug = :slug");
+            $checkStmt->execute([':slug' => $slug]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $slug = $baseSlug . '-' . substr(md5(uniqid()), 0, 5);
+            }
+        } catch (\Throwable $e) {}
+    }
 
     $savedFilename = $slug . '.pdf';
     $targetPath = $ebooksDir . '/' . $savedFilename;
@@ -380,9 +395,6 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
         $pdfSize = filesize($targetPath);
         $origName = $_FILES['pdf']['name'] ?? 'document.pdf';
     }
-
-    $insertedId = time();
-    $pdo = getPdo($env, $rootDir);
 
     if ($pdo) {
         try {

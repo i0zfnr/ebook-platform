@@ -136,26 +136,21 @@ export const ebookService = {
     }
 
     // Post to server backend with generous timeout for large educational PDFs
-    try {
-      const response = await api.post<ApiResponse<Ebook>>('/ebooks', formData, {
-        onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-          if (progressEvent.total && onProgress) {
-            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onProgress(percent);
-          }
-        },
-        timeout: 300000, // 5 minutes for large PDFs
-      });
-
-      if (response.data?.data) {
-        if (pdfFile) {
-          await localBookStorage.saveBook(response.data.data, pdfFile);
+    const response = await api.post<ApiResponse<Ebook>>('/ebooks', formData, {
+      onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+        if (progressEvent.total && onProgress) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
         }
-        return response.data.data;
+      },
+      timeout: 300000, // 5 minutes for large PDFs
+    });
+
+    if (response.data?.data) {
+      if (pdfFile) {
+        await localBookStorage.saveBook(response.data.data, pdfFile);
       }
-    } catch (e: any) {
-      console.warn('Backend upload notice:', e?.message);
-      if (onProgress) onProgress(100);
+      return response.data.data;
     }
 
     return newLocalBook;
