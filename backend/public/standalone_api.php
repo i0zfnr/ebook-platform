@@ -1,0 +1,318 @@
+<?php
+// Standalone Zero-Dependency PHP Engine for Cloud Hosting (Ryaze / 1Panel)
+
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
+$rootDir = dirname(__DIR__);
+$storageDir = $rootDir . '/storage/app/public';
+$ebooksDir = $storageDir . '/ebooks';
+$dbFile = $storageDir . '/ebooks_db.json';
+
+if (!is_dir($ebooksDir)) {
+    @mkdir($ebooksDir, 0777, true);
+}
+
+// Load .env
+$envFile = $rootDir . '/.env';
+$env = [];
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line && $line[0] !== '#') {
+            $parts = explode('=', $line, 2);
+            if (count($parts) === 2) {
+                $k = trim($parts[0]);
+                $v = trim($parts[1]);
+                if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
+                    $v = substr($v, 1, -1);
+                }
+                $env[$k] = $v;
+            }
+        }
+    }
+}
+
+function getDatabase($dbFile) {
+    if (file_exists($dbFile)) {
+        $content = @file_get_contents($dbFile);
+        $data = json_decode($content, true);
+        if (is_array($data)) return $data;
+    }
+    return [];
+}
+
+function saveDatabase($dbFile, $data) {
+    @file_put_contents($dbFile, json_encode($data, JSON_PRETTY_PRINT));
+}
+
+function sendJson($data, $code = 200) {
+    http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($data);
+    exit;
+}
+
+function streamFile($filePath, $contentType = 'application/pdf') {
+    if (!file_exists($filePath)) {
+        http_response_code(404);
+        header('Content-Type: text/plain');
+        echo "File Not Found";
+        exit;
+    }
+
+    $size = filesize($filePath);
+    $fp = fopen($filePath, 'rb');
+
+    header('Content-Type: ' . $contentType);
+    header('Accept-Ranges: bytes');
+    header('Access-Control-Allow-Origin: *');
+
+    if (isset($_SERVER['HTTP_RANGE'])) {
+        list($specifier, $range) = explode('=', $_SERVER['HTTP_RANGE'], 2);
+        if ($specifier === 'bytes') {
+            list($start, $end) = explode('-', $range, 2);
+            $start = intval($start);
+            $end = empty($end) ? $size - 1 : intval($end);
+            $length = $end - $start + 1;
+
+            http_response_code(206);
+            header("Content-Range: bytes $start-$end/$size");
+            header("Content-Length: $length");
+
+            fseek($fp, $start);
+            echo fread($fp, $length);
+            fclose($fp);
+            exit;
+        }
+    }
+
+    header("Content-Length: $size");
+    fpassthru($fp);
+    fclose($fp);
+    exit;
+}
+
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$method = $_SERVER['REQUEST_METHOD'];
+
+// 1. Health
+if ($uri === '/api/health') {
+    sendJson([
+        'status' => 'online',
+        'engine' => 'PHP Standalone Engine',
+        'php_version' => PHP_VERSION,
+        'has_gemini_key' => !empty($env['GEMINI_API_KEY']),
+        'books_count' => count(getDatabase($dbFile)),
+        'storage_writable' => is_writable($storageDir),
+    ]);
+}
+
+// 2. GET /api/ebooks
+if ($uri === '/api/ebooks' && $method === 'GET') {
+    $db = getDatabase($dbFile);
+    $search = $_GET['search'] ?? '';
+    if (!empty($search)) {
+        $q = strtolower(trim($search));
+        $db = array_values(array_filter($db, function($b) use ($q) {
+            return str_contains(strtolower($b['title'] ?? ''), $q) || str_contains(strtolower($b['author'] ?? ''), $q);
+        }));
+    }
+    sendJson(['success' => true, 'data' => $db]);
+}
+
+// 3. GET /api/ebooks/{id}/file
+if (preg_match('#^/api/ebooks/([^/]+)/file$#', $uri, $m) && $method === 'GET') {
+    $idOrSlug = $m[1];
+    $db = getDatabase($dbFile);
+    $found = null;
+    foreach ($db as $b) {
+        if (strval($b['id']) === $idOrSlug || ($b['slug'] ?? '') === $idOrSlug) {
+            $found = $b;
+            break;
+        }
+    }
+    $filename = $found ? basename($found['pdf_path']) : "$idOrSlug.pdf";
+    $targetFile = $ebooksDir . '/' . $filename;
+    streamFile($targetFile, 'application/pdf');
+}
+
+// 4. GET /api/ebooks/{id}
+if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'GET') {
+    $idOrSlug = $m[1];
+    $db = getDatabase($dbFile);
+    foreach ($db as $b) {
+        if (strval($b['id']) === $idOrSlug || ($b['slug'] ?? '') === $idOrSlug) {
+            sendJson(['success' => true, 'data' => $b]);
+        }
+    }
+    sendJson(['success' => false, 'message' => 'E-Book not found'], 404);
+}
+
+// 5. DELETE /api/ebooks/{id}
+if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'DELETE') {
+    $idOrSlug = $m[1];
+    $db = getDatabase($dbFile);
+    $newDb = [];
+    foreach ($db as $b) {
+        if (strval($b['id']) === $idOrSlug || ($b['slug'] ?? '') === $idOrSlug) {
+            if (!empty($b['pdf_path'])) {
+                $targetFile = $storageDir . '/' . $b['pdf_path'];
+                if (file_exists($targetFile)) @unlink($targetFile);
+            }
+        } else {
+            $newDb[] = $b;
+        }
+    }
+    saveDatabase($dbFile, $newDb);
+    sendJson(['success' => true, 'message' => 'Deleted successfully']);
+}
+
+// 6. POST /api/ebooks (Multipart Upload)
+if ($uri === '/api/ebooks' && $method === 'POST') {
+    $title = trim($_POST['title'] ?? 'Untitled E-Book');
+    $author = trim($_POST['author'] ?? 'Lecturer');
+    $description = trim($_POST['description'] ?? '');
+    $totalPages = !empty($_POST['total_pages']) ? intval($_POST['total_pages']) : null;
+    $interactive = !empty($_POST['interactive_elements']) ? json_decode($_POST['interactive_elements'], true) : null;
+
+    $slug = preg_replace('/[^a-z0-9]+/i', '-', strtolower($title));
+    $slug = trim($slug, '-') ?: ('ebook-' . time());
+
+    $savedFilename = $slug . '.pdf';
+    $targetPath = $ebooksDir . '/' . $savedFilename;
+    $pdfSize = null;
+    $origName = 'document.pdf';
+
+    if (!empty($_FILES['pdf']['tmp_name']) && is_uploaded_file($_FILES['pdf']['tmp_name'])) {
+        move_uploaded_file($_FILES['pdf']['tmp_name'], $targetPath);
+        $pdfSize = filesize($targetPath);
+        $origName = $_FILES['pdf']['name'];
+    }
+
+    $newBook = [
+        'id' => time(),
+        'title' => $title,
+        'slug' => $slug,
+        'author' => $author,
+        'description' => $description,
+        'pdf_path' => 'ebooks/' . $savedFilename,
+        'pdf_url' => '/storage/ebooks/' . $savedFilename,
+        'cover_path' => null,
+        'cover_url' => null,
+        'original_filename' => $origName,
+        'file_size' => $pdfSize,
+        'total_pages' => $totalPages,
+        'status' => 'published',
+        'interactive_elements' => $interactive,
+        'created_at' => date('c'),
+        'updated_at' => date('c'),
+    ];
+
+    $db = getDatabase($dbFile);
+    array_unshift($db, $newBook);
+    saveDatabase($dbFile, $db);
+
+    sendJson(['success' => true, 'data' => $newBook], 201);
+}
+
+// 7. POST /api/ai/chat (Live Google Gemini Research Assistant)
+if ($uri === '/api/ai/chat' && $method === 'POST') {
+    $raw = file_get_contents('php://input');
+    $payload = json_decode($raw, true) ?: [];
+
+    $message = $payload['message'] ?? '';
+    $history = $payload['history'] ?? [];
+    $bookTitle = $payload['book_title'] ?? 'Engineering Textbook';
+    $currentPage = $payload['current_page'] ?? 1;
+    $pageText = $payload['page_text'] ?? '';
+
+    $apiKey = $env['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?: '';
+
+    $systemPrompt = "You are Aura AI, an expert academic research assistant and politeknik/university tutor.
+Your sole purpose is to help students with scholarly research, deep conceptual understanding, mathematical derivations, step-by-step problem solving, and synthesis of the textbook topics they are reading.
+- The student is studying \"$bookTitle\" (currently on Page $currentPage).
+" . ($pageText ? "Page excerpt:\n\"\"\"\n" . substr($pageText, 0, 1500) . "\n\"\"\"\n" : "") . "
+Behavioral Guidelines:
+1. Conduct clear, thorough academic research and pedagogical explanations for the student's question.
+2. Provide step-by-step mathematical formulas, derivations, and engineering reasoning formatted in clean Markdown.
+3. Be encouraging, concise, scholarly, and encourage deep scientific curiosity.
+4. Only assist with educational, scientific, research, and textbook topics. Do not engage in harmful, destructive, or irrelevant activities.";
+
+    if (empty($apiKey)) {
+        sendJson([
+            'success' => true,
+            'reply' => "### Academic Analysis: " . htmlspecialchars($message) . "\n\nFor **$bookTitle** (Page $currentPage):\n\n1. **Theoretical Context**: Core concepts relate to standard problem-solving methodologies.\n2. **Derivation**: Evaluate parameters and choose relevant formulas.\n\n*(Please ensure GEMINI_API_KEY is saved in your Ryaze .env)*",
+        ]);
+    }
+
+    $contents = [];
+    foreach (array_slice($history, -6) as $turn) {
+        $contents[] = [
+            'role' => ($turn['role'] ?? '') === 'model' ? 'model' : 'user',
+            'parts' => [['text' => $turn['content'] ?? '']],
+        ];
+    }
+    $contents[] = [
+        'role' => 'user',
+        'parts' => [['text' => $message]],
+    ];
+
+    $models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+    $replyText = '';
+
+    foreach ($models as $model) {
+        $geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . urlencode($apiKey);
+        $ch = curl_init($geminiUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => json_encode([
+                'contents' => $contents,
+                'systemInstruction' => ['parts' => [['text' => $systemPrompt]]],
+                'generationConfig' => ['temperature' => 0.7, 'maxOutputTokens' => 1500],
+            ]),
+            CURLOPT_TIMEOUT => 25,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $res = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && $res) {
+            $data = json_decode($res, true);
+            $candidate = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            if (!empty($candidate)) {
+                $replyText = $candidate;
+                break;
+            }
+        }
+    }
+
+    if (!empty($replyText)) {
+        sendJson(['success' => true, 'reply' => $replyText]);
+    } else {
+        sendJson([
+            'success' => true,
+            'reply' => "I analyzed your question regarding **$bookTitle** (Page $currentPage). Could you clarify the specific formula or step you'd like to break down?",
+        ]);
+    }
+}
+
+// 8. Direct file streaming from /storage/
+if (str_starts_with($uri, '/storage/')) {
+    $rel = substr($uri, strlen('/storage/'));
+    $full = $storageDir . '/' . $rel;
+    streamFile($full);
+}
+
+// 9. Fallback
+sendJson(['status' => 'not_found', 'uri' => $uri], 404);
