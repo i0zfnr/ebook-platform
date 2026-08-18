@@ -27,6 +27,11 @@ export const LibraryPage: React.FC = () => {
     }
   };
 
+  const handleDeleteBook = async (idOrSlug: string | number) => {
+    await ebookService.deleteEbook(idOrSlug);
+    setEbooks((prev) => prev.filter((b) => b.id !== idOrSlug && b.slug !== idOrSlug));
+  };
+
   useEffect(() => {
     fetchBooks();
   }, []);
@@ -131,6 +136,7 @@ export const LibraryPage: React.FC = () => {
             loading={loading}
             error={error}
             onRetry={fetchBooks}
+            onDelete={handleDeleteBook}
             emptyTitle={searchTerm ? 'No books match your search' : 'No e-books uploaded yet'}
             emptyDescription={
               searchTerm

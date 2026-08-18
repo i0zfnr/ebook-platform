@@ -1,15 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Info, FileText } from 'lucide-react';
+import { BookOpen, Info, FileText, Trash2, Loader2 } from 'lucide-react';
 import type { Ebook } from '../../types/ebook';
 import { BookCover } from './BookCover';
 import { formatBytes } from '../../services/ebookService';
 
 interface BookCardProps {
   ebook: Ebook;
+  onDelete?: (idOrSlug: string | number) => Promise<void> | void;
 }
 
-export const BookCard: React.FC<BookCardProps> = ({ ebook }) => {
+export const BookCard: React.FC<BookCardProps> = ({ ebook, onDelete }) => {
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to permanently delete "${ebook.title}"?`)) {
+      setIsDeleting(true);
+      try {
+        if (onDelete) {
+          await onDelete(ebook.slug || ebook.id);
+        }
+      } catch (err) {
+        console.error('Delete error:', err);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
+
   return (
     <div className="liquid-card group relative flex flex-col p-3.5 transition-all duration-300">
       {/* Cover Image with Link to Reader */}
@@ -74,8 +94,21 @@ export const BookCard: React.FC<BookCardProps> = ({ ebook }) => {
           >
             <Info className="h-3.5 w-3.5" />
           </Link>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="flex items-center justify-center rounded-xl p-2 text-slate-400 hover:text-red-600 hover:bg-red-500/10 dark:hover:text-red-400 dark:hover:bg-red-500/20 transition-colors cursor-pointer"
+              title="Delete E-Book"
+              aria-label="Delete E-Book"
+            >
+              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 };
+

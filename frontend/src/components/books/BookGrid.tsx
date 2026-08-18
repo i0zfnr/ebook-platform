@@ -9,6 +9,7 @@ interface BookGridProps {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  onDelete?: (idOrSlug: string | number) => Promise<void> | void;
   emptyTitle?: string;
   emptyDescription?: string;
 }
@@ -18,6 +19,7 @@ export const BookGrid: React.FC<BookGridProps> = ({
   loading = false,
   error = null,
   onRetry,
+  onDelete,
   emptyTitle = 'No e-books yet',
   emptyDescription = 'Upload your first PDF to start building your interactive digital library.',
 }) => {
@@ -84,7 +86,7 @@ export const BookGrid: React.FC<BookGridProps> = ({
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
       {ebooks.map((ebook) => (
-        <BookCard key={ebook.id} ebook={ebook} />
+        <BookCard key={ebook.id} ebook={ebook} onDelete={onDelete} />
       ))}
     </div>
   );

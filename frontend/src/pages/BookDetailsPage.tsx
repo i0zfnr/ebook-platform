@@ -61,10 +61,11 @@ export const BookDetailsPage: React.FC = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!ebook) return;
+    const targetId = ebook?.slug || ebook?.id || id;
+    if (!targetId) return;
     setDeleting(true);
     try {
-      await ebookService.deleteEbook(ebook.slug || ebook.id);
+      await ebookService.deleteEbook(targetId);
     } catch {
       // Handled gracefully
     } finally {
@@ -91,15 +92,27 @@ export const BookDetailsPage: React.FC = () => {
         </div>
         <h2 className="text-xl font-bold">E-Book Not Found</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-[#94a3b8] max-w-md">
-          {error || "The requested book could not be found or has been removed."}
+          {error || "The requested book could not be found in the cloud database."}
         </p>
-        <Link
-          to="/library"
-          className="liquid-btn-primary mt-6 flex items-center gap-2 px-5 py-2.5 text-xs font-bold"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Library
-        </Link>
+        <div className="flex items-center gap-3 mt-6">
+          <Link
+            to="/library"
+            className="liquid-btn-secondary flex items-center gap-2 px-5 py-2.5 text-xs font-bold"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Library
+          </Link>
+          {id && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-colors shadow-lg shadow-red-600/30 cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove From Library
+            </button>
+          )}
+        </div>
       </div>
     );
   }
