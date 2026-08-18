@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "description": "FlipBook Interactive E-Book Platform Monorepo by Hafizul Irfan",
+  "main": "server.js",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev:backend": "cd backend && php artisan serve --port=8001",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "concurrently -n \"backend,frontend\" -c \"magenta,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build": "cd frontend && npm run build",
+    "postinstall": "npm --prefix frontend install",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && node -e \"const fs=require('fs'); if(!fs.existsSync('dist')){fs.mkdirSync('dist',{recursive:true});} fs.cpSync('frontend/dist','dist',{recursive:true});\"",
+    "start": "node server.js",
     "lint": "cd frontend && npm run lint"
   },
   "devDependencies": {
