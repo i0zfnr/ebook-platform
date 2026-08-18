@@ -235,9 +235,19 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto p-2.5 border-b border-slate-200/40 dark:border-white/5 no-scrollbar shrink-0">
         <button
           type="button"
-          onClick={() => handleSendMessage(`Explain what is covered on Page ${currentPage} in simple terms.`)}
+          onClick={() => handleSendMessage(`Please test my memory on Page ${currentPage}. Ask me a key conceptual question or formula problem from this page without giving the answer, and evaluate my recall!`)}
           disabled={isLoading}
-          className="liquid-pill text-[10px] py-1 px-2.5 font-bold whitespace-nowrap text-violet-600 dark:text-violet-400 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
+          className="liquid-pill text-[10px] py-1 px-2.5 font-bold whitespace-nowrap text-violet-600 dark:text-[#a78bfa] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 cursor-pointer border border-violet-500/30"
+        >
+          <Sparkles className="h-3 w-3" />
+          <span>🧠 Test My Memory</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSendMessage(`Explain what is covered on Page ${currentPage} in simple step-by-step terms.`)}
+          disabled={isLoading}
+          className="liquid-pill text-[10px] py-1 px-2.5 font-bold whitespace-nowrap text-indigo-600 dark:text-indigo-400 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
         >
           <Sparkles className="h-3 w-3" />
           <span>Explain Page {currentPage}</span>
@@ -245,17 +255,17 @@ export const AiChatDrawer: React.FC<AiChatDrawerProps> = ({
 
         <button
           type="button"
-          onClick={() => handleSendMessage(`Give me a practice problem based on Page ${currentPage} to test my understanding.`)}
+          onClick={() => handleSendMessage(`Give me a formula calculation problem based on Page ${currentPage} to test if I can solve it from memory.`)}
           disabled={isLoading}
           className="liquid-pill text-[10px] py-1 px-2.5 font-bold whitespace-nowrap text-amber-500 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
         >
           <HelpCircle className="h-3 w-3" />
-          <span>Practice Problem</span>
+          <span>Formula Quiz</span>
         </button>
 
         <button
           type="button"
-          onClick={() => handleSendMessage(`Summarize the key formulas or rules on Page ${currentPage}.`)}
+          onClick={() => handleSendMessage(`Summarize the key formulas, definitions, and rules on Page ${currentPage}.`)}
           disabled={isLoading}
           className="liquid-pill text-[10px] py-1 px-2.5 font-bold whitespace-nowrap text-emerald-500 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1 cursor-pointer"
         >

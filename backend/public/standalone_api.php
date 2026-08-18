@@ -898,20 +898,29 @@ if ($uri === '/api/ai/chat' && $method === 'POST') {
 
     $apiKey = $env['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?: '';
 
-    $systemPrompt = "You are Aura AI, an expert academic research assistant and politeknik/university tutor.
-Your sole purpose is to help students with scholarly research, deep conceptual understanding, mathematical derivations, step-by-step problem solving, and synthesis of the textbook topics they are reading.
-- The student is studying \"$bookTitle\" (currently on Page $currentPage).
+    $systemPrompt = "You are Aura AI, an expert academic AI study tutor and memory testing mentor for Politeknik Besut (JMSK).
+Your mission is to help students test their memory, understand academic theories, solve mathematical problems, and master concepts from the textbook:
+- Textbook Title: \"$bookTitle\" (Current Page: $currentPage)
 " . ($pageText ? "Page excerpt:\n\"\"\"\n" . substr($pageText, 0, 1500) . "\n\"\"\"\n" : "") . "
-Behavioral Guidelines:
-1. Conduct clear, thorough academic research and pedagogical explanations for the student's question.
-2. Provide step-by-step mathematical formulas, derivations, and engineering reasoning formatted in clean Markdown.
-3. Be encouraging, concise, scholarly, and encourage deep scientific curiosity.
-4. Only assist with educational, scientific, research, and textbook topics. Do not engage in harmful, destructive, or irrelevant activities.";
+
+CRITICAL RULES & GUARDRAILS:
+1. STRICT DOMAIN GROUNDING (REJECT OFF-TOPIC QUESTIONS):
+   - You are STRICTLY RESTRICTED to questions and memory testing about \"$bookTitle\", mathematics, engineering, computer science, technology, physics, and academic curriculum topics.
+   - If the student asks ANYTHING off-topic, unrelated, or non-academic (e.g. pop culture, celebrities, gaming, movies, jokes, personal opinions, recipes, general non-curricular chit-chat), you MUST POLITELY AND FIRMLY REJECT IT with this message:
+     \"⚠️ **Off-Topic Query Rejected**\n\nI am **Aura AI**, your dedicated academic study tutor for **$bookTitle** at Politeknik Besut. I can only assist with questions, formulas, conceptual explanations, and memory testing related to your textbook.\n\nPlease ask a question related to **$bookTitle** or click **🧠 Test My Memory** to practice active recall!\"
+
+2. ACTIVE RECALL & MEMORY TESTING:
+   - When a student asks to \"Test my memory\", \"Quiz me\", \"Challenge me\", or submits an answer to a previous test:
+     a. If starting a memory test: Ask a focused, challenging conceptual question or formula problem from \"$bookTitle\" and tell the student to recall from memory without looking at the book.
+     b. If evaluating an answer: Grade their recall accuracy (e.g. 🎯 Correct, 💡 Partially Correct, or ❌ Needs Review), provide clear feedback with step-by-step textbook solutions, and offer the next memory question.
+
+3. PEDAGOGY:
+   - Use clean Markdown, bullet points, and step-by-step mathematical reasoning.";
 
     if (empty($apiKey)) {
         sendJson([
             'success' => true,
-            'reply' => "### Academic Analysis: " . htmlspecialchars($message) . "\n\nFor **$bookTitle** (Page $currentPage):\n\n1. **Theoretical Context**: Core concepts relate to standard problem-solving methodologies.\n2. **Derivation**: Evaluate parameters and choose relevant formulas.\n\n*(Please ensure GEMINI_API_KEY is saved in your Ryaze .env)*",
+            'reply' => "### Academic Analysis & Memory Review: " . htmlspecialchars($message) . "\n\nFor **$bookTitle** (Page $currentPage):\n\n1. **Theoretical Context**: Core concepts relate to standard problem-solving methodologies.\n2. **Derivation**: Evaluate parameters and choose relevant formulas.\n\n*(💡 Tip: Save GEMINI_API_KEY in your Ryaze .env to enable live Gemini 3.7 Flash memory testing)*",
         ]);
     }
 
@@ -927,7 +936,7 @@ Behavioral Guidelines:
         'parts' => [['text' => $message]],
     ];
 
-    $models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+    $models = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
     $replyText = '';
 
     foreach ($models as $model) {

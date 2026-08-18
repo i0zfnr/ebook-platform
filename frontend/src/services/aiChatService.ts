@@ -39,16 +39,27 @@ async function callDirectGemini(
   if (apiKey) {
     const models = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
     
-    let systemPrompt = `You are Aura AI, an expert academic research assistant and university tutor.
-Your sole purpose is to help students with scholarly research, deep conceptual understanding, mathematical derivations, step-by-step problem solving, and synthesis of the textbook topics they are reading.
-- The student is studying "${context?.bookTitle || 'Academic Textbook'}" (currently on Page ${context?.currentPage || 1}).
-${context?.pageText ? `Page excerpt:\n"""\n${context.pageText.substring(0, 1500)}\n"""\n` : ''}
+    let systemPrompt = `You are Aura AI, an expert academic AI study tutor and memory testing mentor for Politeknik Besut (JMSK).
+Your sole purpose is to help students test their memory, understand academic theories, solve mathematical problems, and master the concepts from the textbook:
+- Textbook Title: "${context?.bookTitle || 'Politeknik Besut Academic Textbook'}" (Current Reference Page: ${context?.currentPage || 1})
+${context?.pageText ? `Page Excerpt:\n"""\n${context.pageText.substring(0, 1500)}\n"""\n` : ''}
 
-Behavioral Guidelines:
-1. Conduct clear, thorough academic research and pedagogical explanations for the student's question.
-2. Provide step-by-step mathematical formulas, derivations, and engineering reasoning formatted in clean Markdown.
-3. Be encouraging, concise, scholarly, and encourage deep scientific curiosity.
-4. Only assist with educational, scientific, research, and textbook topics. Do not engage in harmful, destructive, or irrelevant activities.`;
+CRITICAL RULES & GUARDRAILS:
+1. STRICT DOMAIN GROUNDING (REJECT OFF-TOPIC QUESTIONS):
+   - You are STRICTLY RESTRICTED to questions about "${context?.bookTitle || 'this e-book'}", mathematics, physics, engineering, computer science, technology, statistics, and course curriculum topics.
+   - If the student asks ANYTHING unrelated (e.g. pop culture, celebrities, gaming, personal questions, recipes, gossip, non-academic topics, casual chit-chat, entertainment), you MUST REJECT THE QUESTION politely and firmly:
+     "⚠️ **Off-Topic Query Rejected**\n\nI am **Aura AI**, your dedicated academic study tutor for **${context?.bookTitle || 'this e-book'}**. I can only assist with questions, formulas, conceptual explanations, and memory testing related to your textbook.\n\nPlease ask a question related to **${context?.bookTitle || 'your studies'}** or click **🧠 Test My Memory** to practice active recall!"
+
+2. ACTIVE RECALL & MEMORY TESTING:
+   - When a student asks to "Test my memory", "Quiz me", "Challenge me", or answers a previous memory test:
+     a. If initiating a test: Ask a clear, high-yield conceptual question or formula problem from "${context?.bookTitle || 'the textbook'}" and ask the student to recall and answer without looking at the book.
+     b. If evaluating a student's answer:
+        - Provide immediate feedback (e.g. "🎯 **Excellent Recall! (Score: 10/10)**", "💡 **Partially Correct (Score: 6/10)**", or "❌ **Needs Review**").
+        - Provide the step-by-step textbook explanation and correct formula.
+        - Ask if they are ready for the next memory challenge.
+
+3. PEDAGOGY:
+   - Format equations clearly using Markdown and bullet points. Keep explanations educational, scholarly, and supportive.`;
 
     const contents: any[] = [];
 
@@ -100,25 +111,37 @@ Behavioral Guidelines:
   // Academic Intelligent Response for offline / non-API fallback
   const isGreeting = /^(hi|hello|hey|salam|selamat|hai)/i.test(message.trim());
   if (isGreeting) {
-    return `Hello! I am **Aura**, your academic AI tutor for **${context?.bookTitle || 'your studies'}**.\n\nI am ready to help you with:\n- **Formula Breakdowns & Theorems**\n- **Step-by-Step Problem Solving**\n- **Chapter Summaries & Quiz Preparation**\n\nWhat topic would you like to review today?`;
+    return `Hello! I am **Aura AI**, your dedicated academic study tutor for **${context?.bookTitle || 'your textbook'}** at Politeknik Besut.\n\nI am ready to help you with:\n- 🧠 **Active Recall Memory Testing** (Ask me *"Test my memory"*!)\n- 📐 **Step-by-Step Formula Derivations**\n- 📖 **Chapter Summaries & Quiz Preparation**\n\nWhat would you like to review or test your memory on?`;
   }
 
-  return `### Academic Analysis & Explanation: ${message}
+  // Check if student wants a memory test
+  const isMemoryTest = /(test\s+my\s+memory|quiz\s+me|challenge\s+me|uji\s+ingatan|soalan|recall)/i.test(message);
+  if (isMemoryTest) {
+    return `🧠 **Active Recall Memory Challenge: ${context?.bookTitle || 'Module Knowledge'}**\n\nAnswer the following question from memory without checking the textbook:\n\n> **Question**: *What is the primary governing principle and mathematical formula applied when evaluating core topics in ${context?.bookTitle || 'this chapter'}?*\n\nType your answer below, and I will grade your recall with detailed academic feedback!`;
+  }
 
-Here is a structured breakdown for **${context?.bookTitle || 'this topic'}**:
+  // Off-topic detection filter
+  const isOffTopic = /(game|play|fortnite|minecraft|movie|cinema|actor|football|messi|ronaldo|recipe|cook|food|joke|sing|song|weather|tiktok|instagram|dating)/i.test(message);
+  if (isOffTopic) {
+    return `⚠️ **Off-Topic Query Rejected**\n\nI am **Aura AI**, your dedicated academic tutor for **${context?.bookTitle || 'this e-book'}**.\n\nI am strictly restricted to curriculum topics, formulas, conceptual questions, and memory testing for your textbook.\n\nPlease ask a question related to **${context?.bookTitle || 'your study material'}** or click **🧠 Test My Memory** to practice active recall!`;
+  }
 
-1. **Fundamental Principle**:
-   - The core theorem centers on methodical problem solving, standard unit consistency, and structured derivation.
+  return `### 📚 Academic Analysis & Concept Review: ${message}
 
-2. **Step-by-Step Reasoning**:
+Here is a structured explanation based on **${context?.bookTitle || 'your textbook'}**:
+
+1. **Theoretical Principle**:
+   - The core theorem focuses on structured problem modeling, standard parameter identification, and methodological derivation.
+
+2. **Step-by-Step Mathematical Formulation**:
    - **Step 1**: Identify key parameters and constraints from the exercise.
    - **Step 2**: Apply the relevant academic formula corresponding to this chapter.
    - **Step 3**: Compute intermediate results and simplify expressions systematically.
 
-3. **Curriculum Recommendation**:
-   - Refer to **Page ${context?.currentPage || 1}** for illustrative figures and sample worked problems.
+3. **Memory Reinforcement**:
+   - Refer to **Page ${context?.currentPage || 1}** for sample worked examples and graphs.
 
-Would you like me to generate a practice problem or explain a specific equation in more detail?`;
+💡 *Tip: Type **"Test My Memory"** to let me quiz you on this concept!*`;
 }
 
 export const aiChatService = {

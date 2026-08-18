@@ -12,6 +12,7 @@ import {
   BookOpen,
   ChevronDown,
   Check,
+  Brain,
 } from 'lucide-react';
 import { ebookService } from '../services/ebookService';
 import { aiChatService, type ChatMessage } from '../services/aiChatService';
@@ -99,7 +100,7 @@ export const AiTutorPage: React.FC = () => {
       id: 'init',
       role: 'model',
       content:
-        'Welcome to the **AI Study Room**! I am **Aura**, your academic AI tutor.\n\nSelect a textbook from the focus menu above or ask me any question regarding formulas, course syllabus, programming, or revision topics.',
+        'Welcome to the **Aura AI Study & Memory Room**! 🎓✨\n\nI am your dedicated academic AI tutor for **Politeknik Besut (JMSK)**.\n\nHere is how I can assist you:\n- 🧠 **Active Recall Memory Testing**: Click **"Test My Memory"** and I will quiz you on key formulas, concepts, and theorems from your textbook.\n- 📐 **Step-by-Step Problem Solving**: Ask me to explain any equation, derivation, or chapter topic.\n- 🛡️ **Curriculum Focused**: I only answer questions and conduct memory tests based on your selected e-book (off-topic queries are rejected).\n\nSelect a textbook above or click a memory challenge below to begin!',
       timestamp: Date.now(),
     },
   ]);
@@ -291,22 +292,22 @@ export const AiTutorPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Suggested Starter Prompts */}
+      {/* Suggested Active Recall & Memory Testing Prompts */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 shrink-0 no-scrollbar">
         <button
           type="button"
           onClick={() =>
             handleSendMessage(
               selectedBook
-                ? `Provide a step-by-step breakdown of the most important formula or chapter in ${selectedBook.title}.`
-                : 'Explain the fundamental concepts of differentiation and integration with clear examples.'
+                ? `Please test my memory on "${selectedBook.title}". Ask me a challenging conceptual question or formula problem from this textbook, and wait for my answer before revealing the solution!`
+                : 'Please test my memory with a challenging question from our syllabus, and wait for my answer!'
             )
           }
           disabled={isLoading}
-          className="liquid-pill text-[11px] py-1 px-3 font-bold whitespace-nowrap text-violet-600 dark:text-violet-400 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer shadow-sm"
+          className="liquid-pill text-[11px] py-1 px-3 font-bold whitespace-nowrap text-violet-600 dark:text-[#a78bfa] hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer shadow-sm border border-violet-500/30"
         >
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Formula Breakdown</span>
+          <Brain className="h-3.5 w-3.5 text-violet-500" />
+          <span>🧠 Test My Memory (Active Recall)</span>
         </button>
 
         <button
@@ -314,15 +315,15 @@ export const AiTutorPage: React.FC = () => {
           onClick={() =>
             handleSendMessage(
               selectedBook
-                ? `Generate a challenging practice exam question based on ${selectedBook.title} and test my answer.`
-                : 'Give me a challenging practice engineering math problem to solve.'
+                ? `Give me a formula calculation problem from "${selectedBook.title}" to test if I can recall and solve it step-by-step from memory.`
+                : 'Give me a formula problem from the curriculum to test my memory.'
             )
           }
           disabled={isLoading}
           className="liquid-pill text-[11px] py-1 px-3 font-bold whitespace-nowrap text-amber-500 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer shadow-sm"
         >
           <HelpCircle className="h-3.5 w-3.5" />
-          <span>Practice Problem</span>
+          <span>📐 Formula Challenge</span>
         </button>
 
         <button
@@ -330,15 +331,31 @@ export const AiTutorPage: React.FC = () => {
           onClick={() =>
             handleSendMessage(
               selectedBook
-                ? `Summarize the top 5 key takeaways from ${selectedBook.title} for my exam revision.`
-                : 'Summarize the core syllabus takeaways for fast exam revision.'
+                ? `Quiz my memory on the 3 most important definitions and academic terms from "${selectedBook.title}" without giving the answers.`
+                : 'Quiz my memory on 3 core definitions from this subject.'
             )
           }
           disabled={isLoading}
           className="liquid-pill text-[11px] py-1 px-3 font-bold whitespace-nowrap text-emerald-500 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer shadow-sm"
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
-          <span>Revision Summary</span>
+          <span>📝 Key Terms Recall</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            handleSendMessage(
+              selectedBook
+                ? `Give me a tricky True/False statement about concepts in "${selectedBook.title}" to test my conceptual memory.`
+                : 'Give me a True/False statement to test my conceptual recall.'
+            )
+          }
+          disabled={isLoading}
+          className="liquid-pill text-[11px] py-1 px-3 font-bold whitespace-nowrap text-indigo-500 hover:scale-105 active:scale-95 transition-transform flex items-center gap-1.5 cursor-pointer shadow-sm"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>⚡ True/False Test</span>
         </button>
       </div>
 
