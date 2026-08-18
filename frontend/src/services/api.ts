@@ -1,19 +1,17 @@
 import axios from 'axios';
 
 // Smart Base URL resolution:
-// 1. If VITE_API_URL is explicitly set, use it.
-// 2. If running in production browser on a custom domain (e.g. ebook.ryz.my.id), use relative '/api'
-// 3. Otherwise in local development, use 'http://127.0.0.1:8001/api' or 'http://127.0.0.1:8000/api'
+// In the browser on any deployed domain (HTTPS or custom domain like ebook.ryz.my.id), ALWAYS use relative '/api' or window.location.origin + '/api'
 const getBaseUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
   if (typeof window !== 'undefined') {
-    // If in browser on any cloud domain, use full origin URL https://domain.com/api
+    // If deployed on cloud domain (HTTPS or non-localhost)
     if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
       return window.location.origin + '/api';
     }
+  }
+
+  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('127.0.0.1')) {
+    return import.meta.env.VITE_API_URL;
   }
 
   return 'http://127.0.0.1:8001/api';
