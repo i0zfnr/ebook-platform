@@ -20,6 +20,8 @@ import {
 import { ebookService, formatBytes } from '../services/ebookService';
 import { loadPdfDocument, cacheUploadedPdf } from '../services/pdfService';
 import { generateAiLive, saveInteractiveElements } from '../services/aiGeneratorService';
+import { localBookStorage } from '../services/localBookStorage';
+import type { Ebook } from '../types/ebook';
 import type { InteractiveElement } from '../types/interactive';
 
 export const UploadPage: React.FC = () => {
@@ -172,9 +174,39 @@ export const UploadPage: React.FC = () => {
         formData.append('interactive_elements', JSON.stringify(generatedElements));
       }
 
-      const result = await ebookService.uploadEbook(formData, (progress) => {
-        setUploadProgress(progress);
-      });
+      let result: Ebook;
+      try {
+        result = await ebookService.uploadEbook(formData, (progress) => {
+          setUploadProgress(progress);
+        });
+      } catch (err: any) {
+        console.warn('Backend upload failed/offline, creating local IndexedDB book entry...', err);
+        const localSlug = title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)+/g, '') || `ebook-${Date.now()}`;
+
+        result = {
+          id: Date.now(),
+          title: title.trim(),
+          slug: localSlug,
+          author: author.trim() || 'Politeknik Besut Lecturer',
+          description: description.trim(),
+          pdf_path: `ebooks/${localSlug}.pdf`,
+          pdf_url: `/api/ebooks/${localSlug}/file`,
+          cover_path: null,
+          cover_url: coverPreview || null,
+          original_filename: pdfFile.name,
+          file_size: pdfFile.size,
+          total_pages: totalPages || null,
+          status: 'published',
+          interactive_elements: generatedElements.length > 0 ? generatedElements : undefined,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        await localBookStorage.saveBook(result, pdfFile);
+      }
 
       // Cache PDF in memory for instant 0ms reader opening
       if (pdfFile) {
@@ -188,13 +220,13 @@ export const UploadPage: React.FC = () => {
         saveInteractiveElements(result.id, generatedElements);
       }
 
-      navigate(`/book/${result.slug || result.id}`);
+      navigate(`/read/${result.slug || result.id}`);
     } catch (err: any) {
       if (err.response?.data?.errors) {
         setFieldErrors(err.response.data.errors);
       }
       setErrorMessage(
-        err.response?.data?.message || 'Failed to upload e-book. Please verify the backend connection.'
+        err.response?.data?.message || 'Failed to process e-book. Please verify file format.'
       );
     } finally {
       setIsUploading(false);
