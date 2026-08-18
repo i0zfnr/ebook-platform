@@ -12,7 +12,7 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "concurrently -n \"backend,frontend\" -c \"magenta,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "postinstall": "npm --prefix frontend install",
-    "build": "npm --prefix frontend install && npm --prefix frontend run build && node -e \"const fs=require('fs'); if(!fs.existsSync('dist')){fs.mkdirSync('dist',{recursive:true});} fs.cpSync('frontend/dist','dist',{recursive:true});\"",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && node -e \"const fs=require('fs'); if(!fs.existsSync('dist')){fs.mkdirSync('dist',{recursive:true});} fs.cpSync('frontend/dist','dist',{recursive:true}); if(fs.existsSync('backend/public')){fs.cpSync('frontend/dist','backend/public',{recursive:true});}\"",
     "start": "node server.js",
     "lint": "cd frontend && npm run lint"
   },
