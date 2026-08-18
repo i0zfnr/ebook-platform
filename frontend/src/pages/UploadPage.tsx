@@ -158,11 +158,6 @@ export const UploadPage: React.FC = () => {
     setFieldErrors({});
 
     try {
-      const localSlug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)+/g, '') || `ebook-${Date.now()}`;
-
       // 1. Prepare payload for cloud MySQL server sync
       const formData = new FormData();
       formData.append('title', title.trim());
@@ -182,14 +177,16 @@ export const UploadPage: React.FC = () => {
         setUploadProgress(progress);
       });
 
-      const finalSlug = result?.slug || localSlug;
-
-      if (generatedElements.length > 0) {
-        saveInteractiveElements(finalSlug, generatedElements);
+      if (!result || !result.slug) {
+        throw new Error('Server upload failed: no book slug returned from database.');
       }
 
-      // 3. Navigate directly to the cloud book
-      navigate(`/read/${finalSlug}`);
+      if (generatedElements.length > 0) {
+        saveInteractiveElements(result.slug, generatedElements);
+      }
+
+      // 3. Navigate directly to the confirmed cloud book
+      navigate(`/read/${result.slug}`);
     } catch (err: any) {
       console.error('Upload error:', err);
       if (err.response?.data?.errors) {
