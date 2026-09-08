@@ -514,6 +514,7 @@ export const ReaderPage: React.FC = () => {
             setCurrentPage(pageNum);
             setShowThumbnails(false);
           }}
+          spreadMode={spreadMode}
         />
 
         {/* Table of Contents & AI Activities Drawer */}

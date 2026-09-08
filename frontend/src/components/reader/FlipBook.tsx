@@ -11,6 +11,7 @@ interface FlipBookProps {
   onPageFlip: (page: number) => void;
   zoom?: number;
   spreadMode?: 'auto' | 'single' | 'double';
+  showCover?: boolean;
 }
 
 export const FlipBook: React.FC<FlipBookProps> = ({
@@ -20,6 +21,7 @@ export const FlipBook: React.FC<FlipBookProps> = ({
   onPageFlip,
   zoom = 1,
   spreadMode = 'auto',
+  showCover = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bookMountWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -150,7 +152,7 @@ export const FlipBook: React.FC<FlipBookProps> = ({
         maxWidth: 2400,
         minHeight: 280,
         maxHeight: 2400,
-        showCover: true,
+        showCover: showCover,
         usePortrait: isSinglePage,
         startPage: Math.max(0, currentPage - 1),
         drawShadow: true,
@@ -183,7 +185,7 @@ export const FlipBook: React.FC<FlipBookProps> = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRendered, pageImages, dimensions.width, dimensions.height, isSinglePage]);
+  }, [isRendered, pageImages, dimensions.width, dimensions.height, isSinglePage, showCover]);
 
   // 4. Synchronize page changes from toolbar navigation
   useEffect(() => {

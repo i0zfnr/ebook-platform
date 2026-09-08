@@ -9,6 +9,7 @@ interface ThumbnailSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectPage: (page: number) => void;
+  spreadMode?: 'auto' | 'single' | 'double';
 }
 
 const ThumbnailItem: React.FC<{
@@ -79,8 +80,12 @@ export const ThumbnailSidebar: React.FC<ThumbnailSidebarProps> = ({
   isOpen,
   onClose,
   onSelectPage,
+  spreadMode = 'auto',
 }) => {
   if (!isOpen || !pdfDoc) return null;
+
+  const isSpread = spreadMode !== 'single';
+  const baseSpreadPage = currentPage % 2 === 0 ? currentPage - 1 : currentPage;
 
   return (
     <div className="fixed inset-y-0 right-0 z-40 flex w-72 flex-col border-l border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-950/95 backdrop-blur-md shadow-2xl transition-all duration-300">
@@ -104,7 +109,7 @@ export const ThumbnailSidebar: React.FC<ThumbnailSidebarProps> = ({
               key={pageNum}
               pdfDoc={pdfDoc}
               pageNumber={pageNum}
-              isActive={currentPage === pageNum}
+              isActive={isSpread ? pageNum === baseSpreadPage || pageNum === baseSpreadPage + 1 : currentPage === pageNum}
               onSelect={() => {
                 onSelectPage(pageNum);
               }}
