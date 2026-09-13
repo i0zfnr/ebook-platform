@@ -21,6 +21,7 @@ import { ebookService, formatBytes } from '../services/ebookService';
 import { loadPdfDocument, cacheUploadedPdf } from '../services/pdfService';
 import { generateAiLive, saveInteractiveElements } from '../services/aiGeneratorService';
 import { localBookStorage } from '../services/localBookStorage';
+import { checkBackendApi } from '../services/api';
 import type { InteractiveElement } from '../types/interactive';
 import type { Ebook } from '../types/ebook';
 
@@ -196,16 +197,14 @@ export const UploadPage: React.FC = () => {
       cacheUploadedPdf(fallbackSlug, pdfFile);
 
       let result: Ebook | null = null;
-      try {
-        // Attempt cloud upload (times out after 25s if OpenResty isn't proxying)
-        result = await ebookService.uploadEbook(formData, (progress) => {
-          setUploadProgress(progress);
-        });
-      } catch (cloudErr: any) {
-        console.warn(
-          'Cloud upload failed or server is static-only (405/timeout). Saving to local storage engine instead:',
-          cloudErr
-        );
+      if (await checkBackendApi()) {
+        try {
+          result = await ebookService.uploadEbook(formData, (progress) => {
+            setUploadProgress(progress);
+          });
+        } catch (cloudErr: any) {
+          console.warn('Cloud upload failed, saving to local storage engine instead:', cloudErr);
+        }
       }
 
       // If cloud upload succeeded, use the cloud result

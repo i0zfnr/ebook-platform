@@ -24,4 +24,44 @@ const api = axios.create({
   },
 });
 
+let isBackendAvailable: boolean | null = null;
+let lastCheckTime = 0;
+
+/**
+ * Probes the backend API to determine if an active Node/PHP server is running.
+ * If running on a static Nginx host without proxying, returns false so components
+ * can immediately use client-side engines without triggering HTTP 405 console errors.
+ */
+export const checkBackendApi = async (): Promise<boolean> => {
+  const now = Date.now();
+  if (isBackendAvailable !== null && now - lastCheckTime < 30000) {
+    return isBackendAvailable;
+  }
+
+  try {
+    const healthUrl = `${getBaseUrl()}/health`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(healthUrl, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      isBackendAvailable = !!(data && (data.status === 'ok' || data.success));
+    } else {
+      isBackendAvailable = false;
+    }
+  } catch {
+    isBackendAvailable = false;
+  }
+  lastCheckTime = now;
+  return isBackendAvailable;
+};
+
 export default api;
+

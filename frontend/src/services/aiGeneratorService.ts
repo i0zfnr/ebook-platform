@@ -1,5 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import api from './api';
+import api, { checkBackendApi } from './api';
 import type { InteractiveElement } from '../types/interactive';
 
 /**
@@ -361,20 +361,23 @@ export async function generateAiLive(
 
   if (onStepProgress) onStepProgress('Google Gemini AI researching textbook concepts...', 60);
 
-  try {
-    const cleanTitle = bookTitle || 'Course Textbook';
-    const response = await api.post('/generate-ai', {
-      title: cleanTitle,
-      total_pages: totalPages,
-      text_sample: docText,
-    });
+  // Only call cloud backend if active backend server is detected (prevents red 405 on static Nginx host)
+  if (await checkBackendApi()) {
+    try {
+      const cleanTitle = bookTitle || 'Course Textbook';
+      const response = await api.post('/generate-ai', {
+        title: cleanTitle,
+        total_pages: totalPages,
+        text_sample: docText,
+      });
 
-    if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
-      if (onStepProgress) onStepProgress('Google Gemini AI Research Complete!', 100);
-      return response.data.data.filter((el: InteractiveElement) => el.type !== 'qr_link');
+      if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        if (onStepProgress) onStepProgress('Google Gemini AI Research Complete!', 100);
+        return response.data.data.filter((el: InteractiveElement) => el.type !== 'qr_link');
+      }
+    } catch (err) {
+      console.warn('Live backend AI generation fallback:', err);
     }
-  } catch (err) {
-    console.warn('Live backend AI generation fallback:', err);
   }
 
   if (onStepProgress) onStepProgress('Extracting concepts and assembling games...', 90);
@@ -413,20 +416,22 @@ export async function generateAIInteractiveElements(
     docText = await extractDocumentTextSample(pdfDoc, 20);
   } catch {}
 
-  // 4. Call backend API
-  try {
-    const response = await api.post(`/ebooks/${bookId}/generate-ai`, {
-      text_sample: docText,
-      total_pages: totalPages,
-    });
+  // 4. Call backend API if backend is active
+  if (await checkBackendApi()) {
+    try {
+      const response = await api.post(`/ebooks/${bookId}/generate-ai`, {
+        text_sample: docText,
+        total_pages: totalPages,
+      });
 
-    if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
-      const elements: InteractiveElement[] = response.data.data.filter((el: InteractiveElement) => el.type !== 'qr_link');
-      saveInteractiveElements(bookId, elements);
-      return elements;
+      if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        const elements: InteractiveElement[] = response.data.data.filter((el: InteractiveElement) => el.type !== 'qr_link');
+        saveInteractiveElements(bookId, elements);
+        return elements;
+      }
+    } catch (err) {
+      console.warn('Backend Gemini AI generation request failed, using client fallback:', err);
     }
-  } catch (err) {
-    console.warn('Backend Gemini AI generation request failed, using client fallback:', err);
   }
 
   // 5. Client fallback if server is unreachable
