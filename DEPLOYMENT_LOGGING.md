@@ -15,8 +15,10 @@ contents, or form descriptions.
 - No log file after deployment: neither `node server.js` nor
   `backend/public/standalone_api.php` executed. Check the hosting start command,
   `.port` file, OpenResty routing, or PHP-FPM upstream.
-- `server.started`: the Node backend started successfully. Confirm its `port`
-  matches `/www/sites/hosting_clients/ebook/.port`.
+- `server.started`: the Node backend started successfully. Its `port_source`
+  shows whether the port came from Ryaze's `.port`, the `PORT` environment
+  variable, or the local default. The server binds to `0.0.0.0` so Ryaze's
+  managed proxy can reach it.
 - `server.listen_failed`: the Node port is unavailable or invalid.
 - `api.request_started` without `api.request_completed`: the request was
   interrupted, timed out, or the process terminated.

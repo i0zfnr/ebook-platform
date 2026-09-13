@@ -2,8 +2,30 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = process.env.PORT || 8000;
 const ROOT_DIR = __dirname;
+const PORT_FILE = path.join(ROOT_DIR, '.port');
+
+function resolvePort() {
+  const environmentPort = Number.parseInt(process.env.PORT || '', 10);
+  if (Number.isInteger(environmentPort) && environmentPort > 0 && environmentPort <= 65535) {
+    return { port: environmentPort, source: 'environment' };
+  }
+
+  try {
+    const assignedPort = Number.parseInt(fs.readFileSync(PORT_FILE, 'utf8').trim(), 10);
+    if (Number.isInteger(assignedPort) && assignedPort > 0 && assignedPort <= 65535) {
+      return { port: assignedPort, source: '.port' };
+    }
+  } catch {
+    // Local development normally has no Ryaze .port file.
+  }
+
+  return { port: 8000, source: 'default' };
+}
+
+const PORT_CONFIG = resolvePort();
+const PORT = PORT_CONFIG.port;
+const BIND_HOST = '0.0.0.0';
 const DIST_DIR = fs.existsSync(path.join(ROOT_DIR, 'dist'))
   ? path.join(ROOT_DIR, 'dist')
   : path.join(ROOT_DIR, 'frontend', 'dist');
@@ -530,12 +552,21 @@ process.on('unhandledRejection', (reason) => {
 });
 
 server.on('error', (error) => {
-  runtimeLog('server.listen_failed', { port: Number(PORT), error: error.message, stack: error.stack });
+  runtimeLog('server.listen_failed', {
+    host: BIND_HOST,
+    port: Number(PORT),
+    port_source: PORT_CONFIG.source,
+    error: error.message,
+    stack: error.stack,
+  });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, BIND_HOST, () => {
   runtimeLog('server.started', {
+    host: BIND_HOST,
     port: Number(PORT),
+    port_source: PORT_CONFIG.source,
+    port_file: PORT_FILE,
     node_version: process.version,
     working_directory: process.cwd(),
     root_directory: ROOT_DIR,
