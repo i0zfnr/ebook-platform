@@ -329,8 +329,9 @@ const server = http.createServer((req, res) => {
       if (pool) {
         try {
           await pool.query('SELECT 1');
+          await ensureMysqlTable();
           mysqlConnected = true;
-          mysqlDetail = `Connected to MySQL: ${process.env.DB_DATABASE || 'ryz_51_flipbook'} (${process.env.DB_HOST || '127.0.0.1'})`;
+          mysqlDetail = `Connected to MySQL: ${process.env.DB_DATABASE || 'ryz_51_flipbook'} (${process.env.DB_HOST || '127.0.0.1'}) [table: ebooks verified]`;
         } catch (err) {
           mysqlDetail = `MySQL error: ${err.message}`;
         }
@@ -780,6 +781,7 @@ server.on('error', (error) => {
 });
 
 server.listen(PORT, BIND_HOST, () => {
+  ensureMysqlTable().catch(() => {});
   runtimeLog('server.started', {
     host: BIND_HOST,
     port: Number(PORT),
