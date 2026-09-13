@@ -192,8 +192,10 @@ export const UploadPage: React.FC = () => {
       if (err.response?.data?.errors) {
         setFieldErrors(err.response.data.errors);
       }
+      const serverMsg = err.response?.data?.message;
+      const clientMsg = err.message;
       setErrorMessage(
-        err.response?.data?.message || 'Failed to upload e-book to database. Please check connection.'
+        serverMsg || (clientMsg ? `Upload error: ${clientMsg}` : 'Failed to upload e-book to database. Please check connection.')
       );
     } finally {
       setIsUploading(false);

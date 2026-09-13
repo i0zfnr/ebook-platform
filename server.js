@@ -119,6 +119,85 @@ function saveDatabase(data) {
   }
 }
 
+// MySQL Database Engine with Zero-Failure Local Fallback
+let mysqlModule = null;
+try {
+  mysqlModule = require('mysql2/promise');
+} catch {
+  // mysql2 will be dynamically loaded if available
+}
+
+let mysqlPool = null;
+let mysqlPoolError = null;
+
+function getMysqlPool() {
+  if (mysqlPool) return mysqlPool;
+  if (!mysqlModule) {
+    mysqlPoolError = 'mysql2 package not installed; local JSON storage active';
+    return null;
+  }
+
+  const host = process.env.DB_HOST || '127.0.0.1';
+  const port = Number(process.env.DB_PORT || 3306);
+  const database = process.env.DB_DATABASE || process.env.DB_NAME || '';
+  const user = process.env.DB_USERNAME || process.env.DB_USER || '';
+  const password = process.env.DB_PASSWORD || '';
+
+  if (!database || !user) {
+    mysqlPoolError = 'MySQL credentials not fully configured in .env (need DB_DATABASE & DB_USERNAME)';
+    return null;
+  }
+
+  try {
+    mysqlPool = mysqlModule.createPool({
+      host,
+      port,
+      user,
+      password,
+      database,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      connectTimeout: 5000,
+    });
+    runtimeLog('mysql.pool_created', { host, port, database, user });
+    return mysqlPool;
+  } catch (err) {
+    mysqlPoolError = err.message;
+    runtimeLog('mysql.pool_failed', { error: err.message });
+    return null;
+  }
+}
+
+async function ensureMysqlTable() {
+  const pool = getMysqlPool();
+  if (!pool) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ebooks (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        author VARCHAR(255) NULL,
+        description TEXT NULL,
+        pdf_path VARCHAR(255) NOT NULL,
+        cover_path VARCHAR(255) NULL,
+        original_filename VARCHAR(255) NULL,
+        file_size BIGINT UNSIGNED NULL,
+        total_pages INT UNSIGNED NULL,
+        status VARCHAR(50) DEFAULT 'published',
+        interactive_elements JSON NULL,
+        created_at TIMESTAMP NULL,
+        updated_at TIMESTAMP NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    runtimeLog('mysql.table_verified');
+  } catch (err) {
+    mysqlPoolError = err.message;
+    runtimeLog('mysql.table_verify_failed', { error: err.message });
+  }
+}
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
   '.js': 'application/javascript',
@@ -217,29 +296,101 @@ const server = http.createServer((req, res) => {
 
   // Health Diagnostics
   if (pathname === '/api/health') {
-    return sendJson(res, 200, {
-      status: 'online',
-      engine: 'Node Standalone Server',
-      node_version: process.version,
-      has_gemini_key: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
-      books_count: getDatabase().length,
-      storage_writable: true,
-      runtime_log_file: RUNTIME_LOG_FILE,
+    (async () => {
+      let mysqlConnected = false;
+      let mysqlDetail = 'Not configured';
+      const pool = getMysqlPool();
+      if (pool) {
+        try {
+          await pool.query('SELECT 1');
+          mysqlConnected = true;
+          mysqlDetail = `Connected to MySQL: ${process.env.DB_DATABASE || 'ryz_51_flipbook'} (${process.env.DB_HOST || '127.0.0.1'})`;
+        } catch (err) {
+          mysqlDetail = `MySQL error: ${err.message}`;
+        }
+      } else if (mysqlPoolError) {
+        mysqlDetail = mysqlPoolError;
+      }
+
+      return sendJson(res, 200, {
+        status: 'online',
+        engine: 'Node Standalone Server',
+        node_version: process.version,
+        mysql_connected: mysqlConnected,
+        mysql_status: mysqlDetail,
+        database_name: process.env.DB_DATABASE || process.env.DB_NAME || 'not set',
+        database_host: process.env.DB_HOST || '127.0.0.1',
+        has_gemini_key: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
+        books_count: getDatabase().length,
+        storage_writable: true,
+        runtime_log_file: RUNTIME_LOG_FILE,
+      });
+    })().catch((err) => {
+      sendJson(res, 500, { status: 'error', message: err.message });
     });
+    return;
   }
 
   // 1. GET /api/ebooks (Public to all users)
   if (pathname === '/api/ebooks' && method === 'GET') {
-    const db = getDatabase();
-    const search = parsedUrl.searchParams.get('search');
-    let results = db;
-    if (search) {
-      const q = search.toLowerCase();
-      results = results.filter(
-        (b) => b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q))
-      );
-    }
-    return sendJson(res, 200, { success: true, data: results });
+    (async () => {
+      const search = parsedUrl.searchParams.get('search');
+      const pool = getMysqlPool();
+      if (pool) {
+        try {
+          let sql = 'SELECT * FROM ebooks ORDER BY id DESC';
+          let params = [];
+          if (search) {
+            sql = 'SELECT * FROM ebooks WHERE title LIKE ? OR author LIKE ? ORDER BY id DESC';
+            params = [`%${search}%`, `%${search}%`];
+          }
+          const [rows] = await pool.query(sql, params);
+          if (Array.isArray(rows) && rows.length > 0) {
+            const books = rows.map((r) => {
+              let interactive = null;
+              if (r.interactive_elements) {
+                interactive = typeof r.interactive_elements === 'string' ? JSON.parse(r.interactive_elements) : r.interactive_elements;
+              }
+              const slug = r.slug || String(r.id);
+              return {
+                id: r.id,
+                title: r.title,
+                slug: slug,
+                author: r.author,
+                description: r.description,
+                pdf_path: r.pdf_path,
+                pdf_url: `/api/ebooks/${slug}/file`,
+                cover_path: r.cover_path,
+                cover_url: r.cover_path ? `/storage/${r.cover_path}` : null,
+                original_filename: r.original_filename,
+                file_size: r.file_size,
+                total_pages: r.total_pages,
+                status: r.status || 'published',
+                interactive_elements: interactive,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+              };
+            });
+            return sendJson(res, 200, { success: true, data: books, source: 'mysql' });
+          }
+        } catch (err) {
+          runtimeLog('mysql.query_failed', { error: err.message });
+        }
+      }
+
+      const db = getDatabase();
+      let results = db;
+      if (search) {
+        const q = search.toLowerCase();
+        results = results.filter(
+          (b) => b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q))
+        );
+      }
+      return sendJson(res, 200, { success: true, data: results, source: 'json_file' });
+    })().catch((err) => {
+      sendJson(res, 500, { success: false, message: err.message });
+    });
+    return;
   }
 
   // 2. GET /api/ebooks/:id/file
@@ -298,7 +449,7 @@ const server = http.createServer((req, res) => {
     const chunks = [];
 
     req.on('data', (chunk) => chunks.push(chunk));
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const buffer = Buffer.concat(chunks);
         const parts = splitMultipart(buffer, boundary);
@@ -345,14 +496,48 @@ const server = http.createServer((req, res) => {
           target_path: savedPdfPath,
         });
 
+        let insertedId = Date.now();
+        let storageSource = 'json_file';
+
+        // Persist to MySQL if available
+        const pool = getMysqlPool();
+        if (pool) {
+          try {
+            await ensureMysqlTable();
+            const [insertRes] = await pool.query(
+              `INSERT INTO ebooks (title, slug, author, description, pdf_path, original_filename, file_size, total_pages, status, interactive_elements, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+              [
+                title,
+                slug,
+                author,
+                description,
+                `ebooks/${savedFilename}`,
+                pdfFilename,
+                pdfBuffer ? pdfBuffer.length : null,
+                totalPages,
+                'published',
+                interactive ? JSON.stringify(interactive) : null,
+              ]
+            );
+            if (insertRes && insertRes.insertId) {
+              insertedId = Number(insertRes.insertId);
+              storageSource = 'mysql';
+              runtimeLog('mysql.insert_success', { id: insertedId, slug });
+            }
+          } catch (dbErr) {
+            runtimeLog('mysql.insert_failed', { error: dbErr.message, slug });
+          }
+        }
+
         const newBook = {
-          id: Date.now(),
+          id: insertedId,
           title,
           slug,
           author,
           description,
           pdf_path: `ebooks/${savedFilename}`,
-          pdf_url: `/storage/ebooks/${savedFilename}`,
+          pdf_url: `/api/ebooks/${slug}/file`,
           cover_path: null,
           cover_url: null,
           original_filename: pdfFilename,
@@ -362,16 +547,23 @@ const server = http.createServer((req, res) => {
           interactive_elements: interactive,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          storage_source: storageSource,
         };
 
         const db = getDatabase();
-        db.unshift(newBook);
+        const existingIdx = db.findIndex((b) => b.slug === slug || b.id === insertedId);
+        if (existingIdx >= 0) {
+          db[existingIdx] = newBook;
+        } else {
+          db.unshift(newBook);
+        }
         saveDatabase(db);
 
         runtimeLog('upload.completed', {
           id: newBook.id,
           slug: newBook.slug,
           pdf_bytes: newBook.file_size,
+          storage_source: storageSource,
           database_path: DB_FILE,
         });
 
