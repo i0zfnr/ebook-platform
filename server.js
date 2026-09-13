@@ -780,6 +780,11 @@ server.on('error', (error) => {
   });
 });
 
+server.on('upgrade', (req, socket, head) => {
+  socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+});
+
+
 server.listen(PORT, BIND_HOST, () => {
   ensureMysqlTable().catch(() => {});
   runtimeLog('server.started', {
