@@ -32,6 +32,21 @@ function runtimeLog(string $event, array $details = []): void
     if (@file_put_contents($runtimeLogFile, $line, FILE_APPEND | LOCK_EX) === false) {
         error_log('[ebook-runtime-log-write-failed] ' . $line);
     }
+
+    // Mirror to backend/storage/logs/laravel.log in standard Laravel format
+    $level = (str_contains($event, 'error') || str_contains($event, 'failed')) ? 'ERROR' : 'INFO';
+    $laravelDate = date('Y-m-d H:i:s');
+    $laravelLine = "[$laravelDate] local.$level: [$event] " . json_encode($details, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+    $laravelLogTargets = [
+        dirname(__DIR__) . '/storage/logs/laravel.log',
+        dirname(__DIR__, 2) . '/backend/storage/logs/laravel.log',
+        dirname(__DIR__, 2) . '/storage/logs/laravel.log',
+    ];
+    foreach ($laravelLogTargets as $target) {
+        $dir = dirname($target);
+        if (!is_dir($dir)) @mkdir($dir, 0777, true);
+        @file_put_contents($target, $laravelLine, FILE_APPEND | LOCK_EX);
+    }
 }
 
 runtimeLog('api.request_started', [

@@ -11,6 +11,7 @@
 /backend/.env.production
 /backend/storage/*.key
 /backend/storage/logs/*.log
+!/backend/storage/logs/laravel.log
 /backend/storage/framework/cache/*
 !/backend/storage/framework/cache/.gitignore
 /backend/storage/framework/sessions/*

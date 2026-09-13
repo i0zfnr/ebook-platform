@@ -36,11 +36,33 @@ const COVERS_DIR = path.join(STORAGE_DIR, 'covers');
 const DB_FILE = path.join(STORAGE_DIR, 'ebooks_db.json');
 const LOG_DIR = path.join(STORAGE_DIR, 'logs');
 const RUNTIME_LOG_FILE = path.join(LOG_DIR, 'ebook-runtime.log');
+const BACKEND_LOG_DIR = path.join(ROOT_DIR, 'backend', 'storage', 'logs');
+const LARAVEL_LOG_FILE = path.join(BACKEND_LOG_DIR, 'laravel.log');
 
 // Ensure storage directories exist
-[STORAGE_DIR, EBOOKS_DIR, COVERS_DIR, LOG_DIR].forEach((dir) => {
+[STORAGE_DIR, EBOOKS_DIR, COVERS_DIR, LOG_DIR, BACKEND_LOG_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+
+function formatLaravelDate(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function writeLaravelLog(level, message, context = null) {
+  const line = `[${formatLaravelDate()}] local.${level}: ${message}${context ? ' ' + (typeof context === 'object' ? JSON.stringify(context) : context) : ''}\n`;
+  const targets = [
+    LARAVEL_LOG_FILE,
+    path.join(STORAGE_DIR, 'logs', 'laravel.log'),
+  ];
+  for (const t of targets) {
+    try {
+      const dir = path.dirname(t);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.appendFileSync(t, line, 'utf8');
+    } catch {}
+  }
+}
 
 function runtimeLog(event, details = {}) {
   const entry = {
@@ -57,6 +79,10 @@ function runtimeLog(event, details = {}) {
   } catch (error) {
     console.error('[runtime-log-write-failed]', error);
   }
+
+  // Also write formatted entry to laravel.log so it appears in Ryaze file manager
+  const level = event.includes('error') || event.includes('failed') ? 'ERROR' : 'INFO';
+  writeLaravelLog(level, `[${event}]`, details);
 
   console.log(line.trim());
 }
