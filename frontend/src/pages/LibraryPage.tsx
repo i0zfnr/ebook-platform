@@ -15,6 +15,7 @@ export const LibraryPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      localStorage.removeItem('ebook_local_library');
       const data = await ebookService.getEbooks();
       setEbooks(data);
     } catch (err: any) {

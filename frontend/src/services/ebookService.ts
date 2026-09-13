@@ -1,14 +1,12 @@
 import api from './api';
 import type { ApiResponse, Ebook } from '../types/ebook';
 import type { AxiosProgressEvent } from 'axios';
-import { localBookStorage } from './localBookStorage';
 
 export const ebookService = {
   /**
-   * Fetch all ebooks directly from cloud MySQL database with local IndexedDB fallback
+   * Fetch all ebooks directly from cloud MySQL database
    */
   async getEbooks(search?: string, status?: string): Promise<Ebook[]> {
-    let cloudBooks: Ebook[] = [];
     try {
       const params: Record<string, string> = {};
       if (search && search.trim()) params.search = search.trim();
@@ -16,76 +14,43 @@ export const ebookService = {
 
       const response = await api.get<ApiResponse<Ebook[]>>('/ebooks', {
         params,
-        timeout: 6000,
+        timeout: 15000,
       });
 
       if (response.data && Array.isArray(response.data.data)) {
-        cloudBooks = response.data.data;
-      }
-    } catch (err) {
-      console.warn('Backend API /ebooks unreachable, relying on local storage library:', err);
-    }
-
-    // Merge seamlessly with local IndexedDB and localStorage books
-    const localBooks = localBookStorage.getLocalEbooksSync();
-    const merged: Ebook[] = [...cloudBooks];
-    for (const lb of localBooks) {
-      const exists = merged.some(
-        (b) => (lb.id && b.id === lb.id) || (lb.slug && b.slug === lb.slug)
-      );
-      if (!exists) {
-        merged.unshift(lb);
-      }
-    }
-
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase();
-      return merged.filter(
-        (b) =>
-          b.title.toLowerCase().includes(q) ||
-          (b.author && b.author.toLowerCase().includes(q)) ||
-          (b.description && b.description.toLowerCase().includes(q))
-      );
-    }
-
-    return merged;
-  },
-
-  /**
-   * Fetch single ebook by ID or Slug directly from cloud MySQL database or local storage
-   */
-  async getEbook(idOrSlug: string | number): Promise<Ebook> {
-    try {
-      const response = await api.get<ApiResponse<Ebook>>(`/ebooks/${idOrSlug}`, {
-        timeout: 6000,
-      });
-
-      if (
-        response.data &&
-        response.data.data &&
-        typeof response.data.data === 'object' &&
-        response.data.data.title
-      ) {
         return response.data.data;
       }
     } catch (err) {
-      console.warn(`Cloud getEbook(${idOrSlug}) failed, checking local storage:`, err);
+      console.error('Failed to load ebooks from cloud database:', err);
     }
 
-    // Check local storage fallback
-    const local = localBookStorage.getLocalEbookSync(idOrSlug);
-    if (local) {
-      return local;
+    return [];
+  },
+
+  /**
+   * Fetch single ebook by ID or Slug directly from cloud MySQL database
+   */
+  async getEbook(idOrSlug: string | number): Promise<Ebook> {
+    const response = await api.get<ApiResponse<Ebook>>(`/ebooks/${idOrSlug}`, {
+      timeout: 15000,
+    });
+
+    if (
+      response.data &&
+      response.data.data &&
+      typeof response.data.data === 'object' &&
+      response.data.data.title
+    ) {
+      return response.data.data;
     }
 
-    throw new Error('E-Book not found in database or local storage.');
+    throw new Error('E-Book not found in database.');
   },
 
   /**
    * Upload PDF directly to Cloud Server & MySQL database
    */
   async uploadEbook(formData: FormData, onProgress?: (progress: number) => void): Promise<Ebook> {
-    // Post directly to cloud backend with 25s timeout
     const response = await api.post<ApiResponse<Ebook>>('/ebooks', formData, {
       onUploadProgress: (progressEvent: AxiosProgressEvent) => {
         if (progressEvent.total && onProgress) {
@@ -93,7 +58,7 @@ export const ebookService = {
           onProgress(percent);
         }
       },
-      timeout: 25000, // 25 seconds timeout to avoid hanging when static server rejects
+      timeout: 120000, // 2 minutes for uploading PDF to server
     });
 
     if (response.data?.data) {
@@ -119,15 +84,11 @@ export const ebookService = {
   },
 
   /**
-   * Delete an ebook and its files
+   * Delete an ebook and its files from server
    */
   async deleteEbook(idOrSlug: string | number): Promise<void> {
-    // 1. Delete from local IndexedDB and localStorage
-    await localBookStorage.deleteBook(idOrSlug);
-
-    // 2. Try deleting from backend if connected
     try {
-      await api.delete(`/ebooks/${idOrSlug}`, { timeout: 4000 });
+      await api.delete(`/ebooks/${idOrSlug}`, { timeout: 8000 });
     } catch {}
   },
 };

@@ -1,5 +1,4 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import { localBookStorage } from './localBookStorage';
 
 // Configure worker URL with CDN fallback to guarantee 100% worker initialization
 if (typeof window !== 'undefined') {
@@ -115,36 +114,9 @@ export function loadPdfDocument(url: string, bookIdentifier?: string | number): 
   }
 
   const loadPromise = (async () => {
-    // 1. Check local IndexedDB first for instant, offline, zero-network loading
-    if (bookIdentifier) {
-      const localBuffer = await localBookStorage.getPdfBuffer(bookIdentifier);
-      if (localBuffer) {
-        const typedArray = new Uint8Array(localBuffer);
-        const loadingTask = pdfjsLib.getDocument({
-          data: typedArray,
-          cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
-          cMapPacked: true,
-        });
-        return await loadingTask.promise;
-      }
-    }
-
-    if (finalUrl) {
-      const localBuffer = await localBookStorage.getPdfBuffer(finalUrl);
-      if (localBuffer) {
-        const typedArray = new Uint8Array(localBuffer);
-        const loadingTask = pdfjsLib.getDocument({
-          data: typedArray,
-          cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
-          cMapPacked: true,
-        });
-        return await loadingTask.promise;
-      }
-    }
-
-    // 2. Fetch through server URL if provided
+    // Fetch directly from server PDF URL
     if (!finalUrl) {
-      throw new Error('No PDF URL or cached binary found for this e-book.');
+      throw new Error('No PDF URL found for this e-book on server.');
     }
 
     try {
