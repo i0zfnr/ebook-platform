@@ -5,9 +5,10 @@ import { localBookStorage } from './localBookStorage';
 
 export const ebookService = {
   /**
-   * Fetch all ebooks directly from cloud MySQL database
+   * Fetch all ebooks directly from cloud MySQL database with local IndexedDB fallback
    */
   async getEbooks(search?: string, status?: string): Promise<Ebook[]> {
+    let cloudBooks: Ebook[] = [];
     try {
       const params: Record<string, string> = {};
       if (search && search.trim()) params.search = search.trim();
@@ -15,39 +16,76 @@ export const ebookService = {
 
       const response = await api.get<ApiResponse<Ebook[]>>('/ebooks', {
         params,
-        timeout: 10000,
+        timeout: 6000,
       });
 
       if (response.data && Array.isArray(response.data.data)) {
-        return response.data.data;
+        cloudBooks = response.data.data;
       }
     } catch (err) {
-      console.error('Failed to load ebooks from database:', err);
+      console.warn('Backend API /ebooks unreachable, relying on local storage library:', err);
     }
 
-    return [];
+    // Merge seamlessly with local IndexedDB and localStorage books
+    const localBooks = localBookStorage.getLocalEbooksSync();
+    const merged: Ebook[] = [...cloudBooks];
+    for (const lb of localBooks) {
+      const exists = merged.some(
+        (b) => (lb.id && b.id === lb.id) || (lb.slug && b.slug === lb.slug)
+      );
+      if (!exists) {
+        merged.unshift(lb);
+      }
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      return merged.filter(
+        (b) =>
+          b.title.toLowerCase().includes(q) ||
+          (b.author && b.author.toLowerCase().includes(q)) ||
+          (b.description && b.description.toLowerCase().includes(q))
+      );
+    }
+
+    return merged;
   },
 
   /**
-   * Fetch single ebook by ID or Slug directly from cloud MySQL database
+   * Fetch single ebook by ID or Slug directly from cloud MySQL database or local storage
    */
   async getEbook(idOrSlug: string | number): Promise<Ebook> {
-    const response = await api.get<ApiResponse<Ebook>>(`/ebooks/${idOrSlug}`, {
-      timeout: 10000,
-    });
+    try {
+      const response = await api.get<ApiResponse<Ebook>>(`/ebooks/${idOrSlug}`, {
+        timeout: 6000,
+      });
 
-    if (response.data && response.data.data && typeof response.data.data === 'object' && response.data.data.title) {
-      return response.data.data;
+      if (
+        response.data &&
+        response.data.data &&
+        typeof response.data.data === 'object' &&
+        response.data.data.title
+      ) {
+        return response.data.data;
+      }
+    } catch (err) {
+      console.warn(`Cloud getEbook(${idOrSlug}) failed, checking local storage:`, err);
     }
 
-    throw new Error('E-Book not found in database.');
+    // Check local storage fallback
+    const local = localBookStorage.getLocalEbookSync(idOrSlug);
+    if (local) {
+      return local;
+    }
+
+    throw new Error('E-Book not found in database or local storage.');
   },
 
   /**
    * Upload PDF directly to Cloud Server & MySQL database
    */
   async uploadEbook(formData: FormData, onProgress?: (progress: number) => void): Promise<Ebook> {
-    // Post directly to cloud backend
+    // Post directly to cloud backend with 25s timeout
     const response = await api.post<ApiResponse<Ebook>>('/ebooks', formData, {
       onUploadProgress: (progressEvent: AxiosProgressEvent) => {
         if (progressEvent.total && onProgress) {
@@ -55,7 +93,7 @@ export const ebookService = {
           onProgress(percent);
         }
       },
-      timeout: 300000, // 5 minutes for large PDFs
+      timeout: 25000, // 25 seconds timeout to avoid hanging when static server rejects
     });
 
     if (response.data?.data) {

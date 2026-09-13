@@ -1,4 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import { localBookStorage } from './localBookStorage';
 
 // Configure worker URL with CDN fallback to guarantee 100% worker initialization
 if (typeof window !== 'undefined') {
@@ -104,14 +105,48 @@ export function cacheUploadedPdf(key: string | number, source: File | ArrayBuffe
  * Load PDF document directly from Cloud Server API
  */
 export function loadPdfDocument(url: string, bookIdentifier?: string | number): Promise<pdfjsLib.PDFDocumentProxy> {
-  const finalUrl = normalizePdfUrl(url);
+  const finalUrl = normalizePdfUrl(url || '');
 
-  if (pdfDocCache.has(finalUrl)) {
+  if (finalUrl && pdfDocCache.has(finalUrl)) {
     return pdfDocCache.get(finalUrl)!;
+  }
+  if (bookIdentifier && pdfDocCache.has(String(bookIdentifier))) {
+    return pdfDocCache.get(String(bookIdentifier))!;
   }
 
   const loadPromise = (async () => {
-    // 1. Fetch through server URL (and verify it's actual PDF binary)
+    // 1. Check local IndexedDB first for instant, offline, zero-network loading
+    if (bookIdentifier) {
+      const localBuffer = await localBookStorage.getPdfBuffer(bookIdentifier);
+      if (localBuffer) {
+        const typedArray = new Uint8Array(localBuffer);
+        const loadingTask = pdfjsLib.getDocument({
+          data: typedArray,
+          cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+          cMapPacked: true,
+        });
+        return await loadingTask.promise;
+      }
+    }
+
+    if (finalUrl) {
+      const localBuffer = await localBookStorage.getPdfBuffer(finalUrl);
+      if (localBuffer) {
+        const typedArray = new Uint8Array(localBuffer);
+        const loadingTask = pdfjsLib.getDocument({
+          data: typedArray,
+          cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+          cMapPacked: true,
+        });
+        return await loadingTask.promise;
+      }
+    }
+
+    // 2. Fetch through server URL if provided
+    if (!finalUrl) {
+      throw new Error('No PDF URL or cached binary found for this e-book.');
+    }
+
     try {
       const response = await fetch(finalUrl);
       const contentType = response.headers.get('content-type') || '';
@@ -135,12 +170,14 @@ export function loadPdfDocument(url: string, bookIdentifier?: string | number): 
         throw new Error('Downloaded file is not a valid PDF binary.');
       }
     } catch (err: any) {
-      console.error('Fetch PDF directly from server error:', err);
+      console.error('Fetch PDF error:', err);
       throw err;
     }
   })();
 
-  pdfDocCache.set(finalUrl, loadPromise);
+  if (finalUrl) {
+    pdfDocCache.set(finalUrl, loadPromise);
+  }
   if (bookIdentifier) {
     pdfDocCache.set(String(bookIdentifier), loadPromise);
   }

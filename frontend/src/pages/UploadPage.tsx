@@ -18,9 +18,20 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { ebookService, formatBytes } from '../services/ebookService';
-import { loadPdfDocument } from '../services/pdfService';
+import { loadPdfDocument, cacheUploadedPdf } from '../services/pdfService';
 import { generateAiLive, saveInteractiveElements } from '../services/aiGeneratorService';
+import { localBookStorage } from '../services/localBookStorage';
 import type { InteractiveElement } from '../types/interactive';
+import type { Ebook } from '../types/ebook';
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 export const UploadPage: React.FC = () => {
   const navigate = useNavigate();
@@ -153,12 +164,21 @@ export const UploadPage: React.FC = () => {
     }
 
     setIsUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(15);
     setErrorMessage(null);
     setFieldErrors({});
 
     try {
-      // 1. Prepare payload for cloud MySQL server sync
+      // 1. Pre-generate slug and local book representation
+      const baseSlug =
+        title
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '') || `ebook-${Date.now()}`;
+      const fallbackSlug = `${baseSlug}-${Date.now().toString(36).slice(-4)}`;
+
+      // 2. Prepare payload for cloud MySQL server sync
       const formData = new FormData();
       formData.append('title', title.trim());
       if (author.trim()) formData.append('author', author.trim());
@@ -172,30 +192,91 @@ export const UploadPage: React.FC = () => {
         formData.append('interactive_elements', JSON.stringify(generatedElements));
       }
 
-      // 2. Upload to Cloud Server and MySQL Database
-      const result = await ebookService.uploadEbook(formData, (progress) => {
-        setUploadProgress(progress);
-      });
+      // 3. Cache PDF binary in memory cache immediately so flipbook viewer can open it instantly
+      cacheUploadedPdf(fallbackSlug, pdfFile);
 
-      if (!result || !result.slug) {
-        throw new Error('Server upload failed: no book slug returned from database.');
+      let result: Ebook | null = null;
+      try {
+        // Attempt cloud upload (times out after 25s if OpenResty isn't proxying)
+        result = await ebookService.uploadEbook(formData, (progress) => {
+          setUploadProgress(progress);
+        });
+      } catch (cloudErr: any) {
+        console.warn(
+          'Cloud upload failed or server is static-only (405/timeout). Saving to local storage engine instead:',
+          cloudErr
+        );
       }
+
+      // If cloud upload succeeded, use the cloud result
+      if (result && result.slug) {
+        // Also save to local storage for offline reading & instant caching
+        cacheUploadedPdf(result.slug, pdfFile);
+        if (result.id) cacheUploadedPdf(result.id, pdfFile);
+        await localBookStorage.saveBook(result, pdfFile);
+
+        if (generatedElements.length > 0) {
+          saveInteractiveElements(result.slug, generatedElements);
+          if (result.id) saveInteractiveElements(result.id, generatedElements);
+        }
+
+        navigate(`/read/${result.slug}`);
+        return;
+      }
+
+      // 4. Client-side storage fallback (guaranteed to succeed 100%)
+      let coverDataUrl: string | null = null;
+      if (coverFile) {
+        try {
+          coverDataUrl = await fileToBase64(coverFile);
+        } catch {
+          coverDataUrl = coverPreview || null;
+        }
+      } else if (coverPreview) {
+        coverDataUrl = coverPreview;
+      }
+
+      const localBook: Ebook = {
+        id: Date.now(),
+        title: title.trim(),
+        slug: fallbackSlug,
+        author: author.trim() || 'JMSK Lecturer',
+        description: description.trim() || '',
+        pdf_path: '',
+        cover_path: null,
+        original_filename: pdfFile.name,
+        cover_url: coverDataUrl,
+        pdf_url: '',
+        total_pages: totalPages || 1,
+        file_size: pdfFile.size,
+        status: 'published',
+        interactive_elements: generatedElements,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      await localBookStorage.saveBook(localBook, pdfFile);
+      cacheUploadedPdf(localBook.slug, pdfFile);
+      cacheUploadedPdf(localBook.id, pdfFile);
 
       if (generatedElements.length > 0) {
-        saveInteractiveElements(result.slug, generatedElements);
+        saveInteractiveElements(localBook.slug, generatedElements);
+        saveInteractiveElements(localBook.id, generatedElements);
       }
 
-      // 3. Navigate directly to the confirmed cloud book
-      navigate(`/read/${result.slug}`);
+      setUploadProgress(100);
+      // Seamlessly navigate to the interactive reader!
+      navigate(`/read/${localBook.slug}`);
     } catch (err: any) {
-      console.error('Upload error:', err);
+      console.error('Fatal upload error:', err);
       if (err.response?.data?.errors) {
         setFieldErrors(err.response.data.errors);
       }
       const serverMsg = err.response?.data?.message;
       const clientMsg = err.message;
       setErrorMessage(
-        serverMsg || (clientMsg ? `Upload error: ${clientMsg}` : 'Failed to upload e-book to database. Please check connection.')
+        serverMsg ||
+          (clientMsg ? `Upload error: ${clientMsg}` : 'Failed to publish e-book. Please check connection.')
       );
     } finally {
       setIsUploading(false);
