@@ -11,6 +11,51 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With, Access-Control-Request-Private-Network');
 header('Access-Control-Allow-Private-Network: true');
 
+$runtimeLogDir = dirname(__DIR__, 2) . '/storage/logs';
+$runtimeLogFile = $runtimeLogDir . '/ebook-runtime.log';
+if (!is_dir($runtimeLogDir)) {
+    @mkdir($runtimeLogDir, 0777, true);
+}
+
+function runtimeLog(string $event, array $details = []): void
+{
+    global $runtimeLogFile;
+
+    $entry = array_merge([
+        'timestamp' => gmdate('c'),
+        'engine' => 'php-standalone',
+        'pid' => getmypid(),
+        'event' => $event,
+    ], $details);
+
+    $line = json_encode($entry, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+    if (@file_put_contents($runtimeLogFile, $line, FILE_APPEND | LOCK_EX) === false) {
+        error_log('[ebook-runtime-log-write-failed] ' . $line);
+    }
+}
+
+runtimeLog('api.request_started', [
+    'method' => $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN',
+    'path' => parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH),
+    'content_length' => intval($_SERVER['CONTENT_LENGTH'] ?? 0),
+    'content_type' => $_SERVER['CONTENT_TYPE'] ?? null,
+    'php_version' => PHP_VERSION,
+    'working_directory' => getcwd(),
+    'script_filename' => $_SERVER['SCRIPT_FILENAME'] ?? __FILE__,
+    'log_file' => $runtimeLogFile,
+]);
+
+register_shutdown_function(function (): void {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        runtimeLog('process.fatal_error', [
+            'error' => $error['message'],
+            'file' => $error['file'],
+            'line' => $error['line'],
+        ]);
+    }
+});
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
@@ -110,9 +155,20 @@ function getPdo($env, $rootDir) {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
                 $pdo = $testPdo;
+                runtimeLog('database.connected', [
+                    'driver' => 'mysql',
+                    'host' => $host,
+                    'port' => intval($port),
+                    'database_configured' => $db !== '',
+                ]);
                 return $pdo;
             } catch (\Throwable $e) {
-                // Try next host
+                runtimeLog('database.connection_failed', [
+                    'driver' => 'mysql',
+                    'host' => $host,
+                    'port' => intval($port),
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
     }
@@ -143,13 +199,26 @@ function getPdo($env, $rootDir) {
             updated_at TEXT NULL
         );");
         $pdo = $sqlitePdo;
+        runtimeLog('database.connected', [
+            'driver' => 'sqlite',
+            'path' => $sqlitePath,
+        ]);
         return $pdo;
     } catch (\Throwable $e) {
+        runtimeLog('database.connection_failed', [
+            'driver' => 'sqlite',
+            'error' => $e->getMessage(),
+        ]);
         return null;
     }
 }
 
 function sendJson($data, $code = 200) {
+    runtimeLog('api.request_completed', [
+        'method' => $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN',
+        'path' => parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH),
+        'status' => $code,
+    ]);
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data);
@@ -234,6 +303,7 @@ if ($uri === '/api/health') {
         'post_max_size' => ini_get('post_max_size'),
         'memory_limit' => ini_get('memory_limit'),
         'max_execution_time' => ini_get('max_execution_time'),
+        'runtime_log_file' => $runtimeLogFile,
     ]);
 }
 
@@ -422,6 +492,12 @@ if (preg_match('#^/api/ebooks/([^/]+)$#', $uri, $m) && $method === 'DELETE') {
 
 // 6. POST /api/ebooks (Insert directly into MySQL database)
 if ($uri === '/api/ebooks' && $method === 'POST') {
+    runtimeLog('upload.processing_started', [
+        'request_bytes' => intval($_SERVER['CONTENT_LENGTH'] ?? 0),
+        'php_upload_error' => $_FILES['pdf']['error'] ?? null,
+        'php_upload_tmp_present' => !empty($_FILES['pdf']['tmp_name']),
+    ]);
+
     $title = trim($_POST['title'] ?? 'Untitled E-Book');
     $author = trim($_POST['author'] ?? 'Lecturer');
     $description = trim($_POST['description'] ?? '');
@@ -462,6 +538,11 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
         }
         $pdfSize = filesize($targetPath);
         $origName = $_FILES['pdf']['name'] ?? 'document.pdf';
+        runtimeLog('upload.file_saved', [
+            'original_filename' => $origName,
+            'pdf_bytes' => $pdfSize,
+            'target_path' => $targetPath,
+        ]);
 
         // Copy to other storage locations for zero-failure streaming
         foreach ([$altPath1, $altPath2, $altPath3] as $alt) {
@@ -474,6 +555,12 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
     } else {
         // No PDF was received
         $uploadError = $_FILES['pdf']['error'] ?? 'no file';
+        runtimeLog('upload.file_missing', [
+            'php_upload_error' => $uploadError,
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+            'post_max_size' => ini_get('post_max_size'),
+            'request_bytes' => intval($_SERVER['CONTENT_LENGTH'] ?? 0),
+        ]);
         sendJson(['success' => false, 'message' => 'No PDF file received by server. Upload error code: ' . $uploadError . '. Check upload_max_filesize and post_max_size PHP settings.'], 400);
     }
 
@@ -506,6 +593,10 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
         } catch (\Throwable $e) {
             $dbError = $e->getMessage();
             error_log("Insert into MySQL error: " . $dbError);
+            runtimeLog('upload.database_insert_failed', [
+                'error' => $dbError,
+                'slug' => $slug,
+            ]);
         }
     } else {
         $dbError = 'No database connection available (PDO returned null). Check DB credentials in .env';
@@ -517,6 +608,13 @@ if ($uri === '/api/ebooks' && $method === 'POST') {
         if (file_exists($targetPath)) @unlink($targetPath);
         sendJson(['success' => false, 'message' => 'Database insert failed: ' . ($dbError ?? 'Unknown error. Check server logs.')], 500);
     }
+
+    runtimeLog('upload.completed', [
+        'id' => $insertedId,
+        'slug' => $slug,
+        'pdf_bytes' => $pdfSize,
+        'database_driver' => $pdo ? $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) : null,
+    ]);
 
     $newBook = [
         'id' => $insertedId,

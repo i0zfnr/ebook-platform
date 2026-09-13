@@ -12,11 +12,32 @@ const STORAGE_DIR = path.join(ROOT_DIR, 'storage');
 const EBOOKS_DIR = path.join(STORAGE_DIR, 'ebooks');
 const COVERS_DIR = path.join(STORAGE_DIR, 'covers');
 const DB_FILE = path.join(STORAGE_DIR, 'ebooks_db.json');
+const LOG_DIR = path.join(STORAGE_DIR, 'logs');
+const RUNTIME_LOG_FILE = path.join(LOG_DIR, 'ebook-runtime.log');
 
 // Ensure storage directories exist
-[STORAGE_DIR, EBOOKS_DIR, COVERS_DIR].forEach((dir) => {
+[STORAGE_DIR, EBOOKS_DIR, COVERS_DIR, LOG_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+
+function runtimeLog(event, details = {}) {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    engine: 'node',
+    pid: process.pid,
+    event,
+    ...details,
+  };
+
+  const line = `${JSON.stringify(entry)}\n`;
+  try {
+    fs.appendFileSync(RUNTIME_LOG_FILE, line, 'utf8');
+  } catch (error) {
+    console.error('[runtime-log-write-failed]', error);
+  }
+
+  console.log(line.trim());
+}
 
 // Load environment variables from .env files
 function loadEnv() {
@@ -45,7 +66,9 @@ function loadEnv() {
             }
           }
         });
-      } catch {}
+      } catch (error) {
+        runtimeLog('environment.read_failed', { path: p, error: error.message });
+      }
     }
   }
 }
@@ -60,6 +83,7 @@ function getDatabase() {
     }
   } catch (e) {
     console.error('Error reading database:', e);
+    runtimeLog('database.read_failed', { path: DB_FILE, error: e.message });
   }
   return [];
 }
@@ -69,6 +93,7 @@ function saveDatabase(data) {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) {
     console.error('Error saving database:', e);
+    runtimeLog('database.write_failed', { path: DB_FILE, error: e.message });
   }
 }
 
@@ -139,6 +164,24 @@ const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
   const method = req.method;
+  const startedAt = Date.now();
+
+  if (pathname.startsWith('/api/')) {
+    runtimeLog('api.request_started', {
+      method,
+      path: pathname,
+      content_length: Number(req.headers['content-length'] || 0),
+      content_type: req.headers['content-type'] || null,
+    });
+    res.on('finish', () => {
+      runtimeLog('api.request_completed', {
+        method,
+        path: pathname,
+        status: res.statusCode,
+        duration_ms: Date.now() - startedAt,
+      });
+    });
+  }
 
   // Handle CORS Preflight
   if (method === 'OPTIONS') {
@@ -159,6 +202,7 @@ const server = http.createServer((req, res) => {
       has_gemini_key: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
       books_count: getDatabase().length,
       storage_writable: true,
+      runtime_log_file: RUNTIME_LOG_FILE,
     });
   }
 
@@ -272,6 +316,13 @@ const server = http.createServer((req, res) => {
           fs.writeFileSync(savedPdfPath, pdfBuffer);
         }
 
+        runtimeLog('upload.file_received', {
+          original_filename: pdfFilename,
+          pdf_bytes: pdfBuffer ? pdfBuffer.length : 0,
+          request_bytes: buffer.length,
+          target_path: savedPdfPath,
+        });
+
         const newBook = {
           id: Date.now(),
           title,
@@ -295,11 +346,28 @@ const server = http.createServer((req, res) => {
         db.unshift(newBook);
         saveDatabase(db);
 
+        runtimeLog('upload.completed', {
+          id: newBook.id,
+          slug: newBook.slug,
+          pdf_bytes: newBook.file_size,
+          database_path: DB_FILE,
+        });
+
         return sendJson(res, 201, { success: true, data: newBook });
       } catch (err) {
         console.error('Upload parsing error:', err);
+        runtimeLog('upload.failed', { error: err.message, stack: err.stack });
         return sendJson(res, 500, { success: false, message: err.message });
       }
+    });
+    req.on('aborted', () => {
+      runtimeLog('upload.aborted', {
+        received_bytes: chunks.reduce((total, chunk) => total + chunk.length, 0),
+        expected_bytes: Number(req.headers['content-length'] || 0),
+      });
+    });
+    req.on('error', (error) => {
+      runtimeLog('upload.request_error', { error: error.message, stack: error.stack });
     });
     return;
   }
@@ -450,6 +518,40 @@ function splitMultipart(buffer, boundary) {
   return parts;
 }
 
+process.on('uncaughtException', (error) => {
+  runtimeLog('process.uncaught_exception', { error: error.message, stack: error.stack });
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  runtimeLog('process.unhandled_rejection', { error: error.message, stack: error.stack });
+  process.exit(1);
+});
+
+server.on('error', (error) => {
+  runtimeLog('server.listen_failed', { port: Number(PORT), error: error.message, stack: error.stack });
+});
+
 server.listen(PORT, () => {
-  console.log(`[FlipBook Monorepo Engine] Running on port ${PORT}`);
+  runtimeLog('server.started', {
+    port: Number(PORT),
+    node_version: process.version,
+    working_directory: process.cwd(),
+    root_directory: ROOT_DIR,
+    dist_directory: DIST_DIR,
+    dist_index_exists: fs.existsSync(path.join(DIST_DIR, 'index.html')),
+    storage_directory: STORAGE_DIR,
+    storage_writable: (() => {
+      try {
+        fs.accessSync(STORAGE_DIR, fs.constants.W_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    })(),
+    database_file_exists: fs.existsSync(DB_FILE),
+    has_gemini_key: !!(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
+    log_file: RUNTIME_LOG_FILE,
+  });
 });
